@@ -1,0 +1,3642 @@
+<!doctype html>
+<!--
+  ============================================================================
+  Quest for DARPA: The Legend of Jason CIO
+  Version: 1.0.0
+  License: MIT
+  Build date: 2026-04-28
+  ----------------------------------------------------------------------------
+  A single-file, self-contained retro top-down web game built for a family-day
+  event. Six short stages walk players through ~75 years of AI history (Turing
+  -> ELIZA -> AI Winter -> Deep Blue -> DARPA Grand Challenge -> Transformers),
+  scaled to three age tiers (Sprout 5-7 / Cadet 8-10 / Operative 11-14), with
+  seven hidden Easter eggs, a walkable ARPANET hub featuring Heilmeier's
+  Catechism and DARPA office banners, a 5-minute timer (toggle), and a fully
+  sourced References screen. No external assets except one optional Google
+  Font (Press Start 2P). No tracking, no cookies, no localStorage, no PII.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>Quest for DARPA — The Legend of Jason CIO</title>
+  <!--
+    Fully offline: no external fonts, scripts, or images are loaded.
+    The CSS uses a system-monospace fallback stack so the retro look is
+    preserved even with zero network access.
+  -->
+  <style>
+    /* ----------------------------------------------------------------------
+       16-color palette (NES/SNES homage). Editable in one place.
+       ------------------------------------------------------------------- */
+    :root{
+      --c-ink:        #0b1020;
+      --c-paper:      #f4ecd8;
+      --c-grass:      #4a8a3f;
+      --c-grass-dk:   #2f5a28;
+      --c-grass-lt:   #7ab564;
+      --c-stone:      #8a8576;
+      --c-stone-dk:   #5e5a4f;
+      --c-wood:       #8a5a2b;
+      --c-gold:       #f2c14e;
+      --c-sky:        #6ec0ff;
+      --c-sky-dk:     #2a6db0;
+      --c-lab:        #1d2b46;
+      --c-lab-lt:     #2e4a76;
+      --c-snow:       #e6f0fb;
+      --c-magenta:    #c64dc6;
+      --c-warn:       #ff9a3c;
+
+      --hud-bg:       #1a1f33;
+      --hud-fg:       #f4ecd8;
+      --accent:       #f2c14e;
+      --danger:       #ff6464;
+      --ok:           #6ec0ff;
+      --focus:        #ffe066;
+
+      /* Fully offline: system-monospace stack only. No web fonts. */
+      --ui-pixel: ui-monospace, "Cascadia Mono", "SFMono-Regular",
+                  Menlo, Consolas, "Courier New", monospace;
+      --ui-body:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                  "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* Reset-ish */
+    *,*::before,*::after{ box-sizing:border-box; }
+    html,body{ margin:0; padding:0; height:100%; }
+    body{
+      font-family: var(--ui-body);
+      font-size: 16px;
+      line-height: 1.45;
+      color: var(--hud-fg);
+      background:
+        radial-gradient(circle at 50% 20%, #1a2348 0%, #0b1020 60%, #04060e 100%);
+      min-height: 100vh;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    button{ font-family: inherit; font-size: inherit; cursor: pointer; }
+    button:focus-visible, [tabindex]:focus-visible, input:focus-visible,
+    select:focus-visible, a:focus-visible{
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    /* App scaffold */
+    #app{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Pixel chrome panels */
+    .panel{
+      background: #131933;
+      border: 4px solid #0b1020;
+      box-shadow:
+        inset 0 0 0 2px #2a3460,
+        inset 0 0 0 4px #131933,
+        0 4px 0 #04060e;
+      border-radius: 4px;
+      padding: 16px;
+    }
+    .panel--paper{
+      background: var(--c-paper);
+      color: #1a1a1a;
+      border-color: #4a3a1d;
+      box-shadow:
+        inset 0 0 0 2px #b89c63,
+        inset 0 0 0 4px var(--c-paper),
+        0 4px 0 #04060e;
+    }
+
+    h1, h2, h3, .pixel{
+      font-family: var(--ui-pixel);
+      letter-spacing: 0.04em;
+      line-height: 1.3;
+    }
+    h1{ font-size: clamp(18px, 4vw, 28px); margin: 0 0 8px; }
+    h2{ font-size: clamp(14px, 2.6vw, 18px); margin: 0 0 8px; }
+    h3{ font-size: 13px; margin: 0 0 6px; }
+
+    .row{ display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .grow{ flex: 1 1 auto; }
+    .center{ text-align: center; }
+    .dim{ opacity: .75; }
+    .small{ font-size: 13px; }
+    .tiny{ font-size: 12px; }
+    .nowrap{ white-space: nowrap; }
+
+    /* Buttons */
+    .btn{
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px;
+      background: #2a3460;
+      color: var(--hud-fg);
+      border: 3px solid #0b1020;
+      border-radius: 4px;
+      padding: 12px 16px;
+      font-family: var(--ui-pixel);
+      font-size: 13px;
+      box-shadow: 0 3px 0 #04060e;
+      transition: transform .04s ease, box-shadow .04s ease, background .15s;
+      min-height: 44px;
+      text-decoration: none;
+    }
+    .btn:hover{ background: #354387; }
+    .btn:active{ transform: translateY(2px); box-shadow: 0 1px 0 #04060e; }
+    .btn--primary{ background: var(--accent); color: #1a1a1a; border-color: #6b4c12; }
+    .btn--primary:hover{ background: #ffd87a; }
+    .btn--ghost{ background: transparent; box-shadow: none; border-color: #2a3460; }
+    .btn--ghost:hover{ background: #1a2348; }
+    .btn--big{ font-size: 14px; padding: 18px 22px; min-height: 64px; }
+
+    /* Screens (only one shown at a time) */
+    .screen{ display: none; }
+    .screen.is-active{ display: block; }
+
+    /* ----- Title screen ----- */
+    .title-art{
+      display: grid;
+      place-items: center;
+      gap: 14px;
+      padding: 22px 12px 12px;
+    }
+    .title-logo{
+      font-family: var(--ui-pixel);
+      font-size: clamp(22px, 6vw, 44px);
+      color: var(--accent);
+      text-shadow:
+        2px 2px 0 #6b4c12,
+        4px 4px 0 #04060e;
+      letter-spacing: .04em;
+      text-align: center;
+      line-height: 1.05;
+    }
+    .title-sub{
+      font-family: var(--ui-pixel);
+      font-size: clamp(11px, 2.4vw, 16px);
+      color: var(--c-sky);
+      text-shadow: 2px 2px 0 #04060e;
+    }
+    .title-actions{ display: grid; gap: 10px; max-width: 320px; margin: 12px auto; }
+    .shield-svg{ width: 88px; height: 110px; image-rendering: pixelated; }
+    .hero-canvas{
+      width: 96px; height: 96px; image-rendering: pixelated;
+      background: #0b1020; border: 3px solid #2a3460; border-radius: 4px;
+    }
+
+    /* Tier cards */
+    .tier-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .tier-card{
+      background: #1a2348;
+      border: 3px solid #0b1020;
+      border-radius: 6px;
+      padding: 16px;
+      text-align: left;
+      box-shadow: 0 4px 0 #04060e;
+      cursor: pointer;
+      color: var(--hud-fg);
+      font-family: inherit;
+      font-size: 14px;
+      min-height: 120px;
+      transition: transform .05s ease, background .15s;
+    }
+    .tier-card:hover{ background: #2a3460; }
+    .tier-card[aria-pressed="true"]{ background: #4a3a86; border-color: var(--accent); }
+    .tier-card .tier-name{
+      font-family: var(--ui-pixel); color: var(--accent); font-size: 14px; margin-bottom: 6px;
+    }
+
+    /* Setup form */
+    .field{ display: grid; gap: 6px; margin: 10px 0; }
+    .field label{ font-size: 13px; opacity: .85; }
+    .field input[type="text"]{
+      font-family: var(--ui-body); font-size: 16px;
+      padding: 12px;
+      background: #f4ecd8; color: #1a1a1a;
+      border: 3px solid #0b1020; border-radius: 4px;
+      width: 100%; max-width: 340px;
+    }
+    .swatch-row{ display: flex; gap: 10px; flex-wrap: wrap; }
+    .swatch{
+      width: 56px; height: 56px;
+      border: 3px solid #0b1020; border-radius: 4px;
+      background: var(--c-grass);
+      cursor: pointer;
+    }
+    .swatch[aria-pressed="true"]{ outline: 3px solid var(--accent); outline-offset: 2px; }
+    .swatch.s-green{ background: var(--c-grass); }
+    .swatch.s-blue{  background: var(--sky-dk, #2a6db0); }
+    .swatch.s-red{   background: #b8412c; }
+    .swatch.s-gold{  background: var(--accent); }
+
+    /* HUD */
+    #hud{
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: center;
+      background: var(--hud-bg);
+      border: 3px solid #0b1020;
+      border-radius: 6px;
+      padding: 8px 10px;
+      box-shadow: 0 3px 0 #04060e;
+      font-family: var(--ui-pixel);
+      font-size: 11px;
+    }
+    #hud .col{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    #hud .pill{
+      background: #0b1020;
+      border: 2px solid #2a3460;
+      padding: 6px 8px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #hud .pill.warn{ border-color: var(--c-warn); color: var(--c-warn); }
+    #hud .pill.danger{ border-color: var(--danger); color: var(--danger); }
+    #hud .neurons{ color: var(--c-sky); letter-spacing: 2px; }
+    #hud .inventory{
+      display: inline-flex; gap: 4px;
+    }
+    #hud .slot{
+      width: 26px; height: 26px;
+      background: #0b1020;
+      border: 2px solid #2a3460;
+      border-radius: 3px;
+      display: grid; place-items: center;
+      font-size: 14px;
+      color: var(--accent);
+    }
+    #hud .slot.empty{ color: #2a3460; }
+    .badge-tier{
+      background: var(--accent); color: #1a1a1a;
+      padding: 3px 6px; border-radius: 3px; font-size: 10px;
+    }
+
+    /* Game stage */
+    #stage-area{
+      position: relative;
+      background: #0b1020;
+      border: 4px solid #0b1020;
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 2px #2a3460, 0 4px 0 #04060e;
+      overflow: hidden;
+      aspect-ratio: 16 / 11;
+      max-width: 960px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    #stage-canvas{
+      width: 100%; height: 100%;
+      image-rendering: pixelated;
+      display: block;
+    }
+
+    /* Scanlines / vignette overlay (CRT) */
+    #stage-area.crt::after{
+      content: "";
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(0,0,0,0) 0,
+          rgba(0,0,0,0) 2px,
+          rgba(0,0,0,.18) 3px
+        ),
+        radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(0,0,0,.45) 100%);
+      mix-blend-mode: multiply;
+    }
+    @media (prefers-reduced-motion: reduce){
+      #stage-area.crt::after{ display: none; }
+    }
+
+    /* Splash banner over canvas */
+    .stage-splash{
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      background: rgba(11,16,32,.85);
+      color: var(--accent);
+      text-align: center;
+      font-family: var(--ui-pixel);
+      animation: splashIn .25s ease;
+    }
+    @keyframes splashIn{ from{ opacity: 0; } to{ opacity: 1; } }
+    @media (prefers-reduced-motion: reduce){ .stage-splash{ animation: none; } }
+
+    /* Bottom controls */
+    #controls{
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+    #controls .group{
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .dpad{
+      display: grid;
+      grid-template-columns: repeat(3, 56px);
+      grid-template-rows: repeat(3, 56px);
+      gap: 4px;
+      width: max-content;
+      user-select: none;
+    }
+    .dpad button{
+      width: 56px; height: 56px;
+      background: #2a3460;
+      border: 3px solid #0b1020;
+      border-radius: 6px;
+      color: var(--hud-fg);
+      font-family: var(--ui-pixel);
+      font-size: 18px;
+    }
+    .dpad button:active{ background: #4a3a86; }
+    .dpad .blank{ visibility: hidden; }
+    .dpad .a{
+      background: var(--accent); color: #1a1a1a;
+      border-color: #6b4c12; font-size: 14px;
+    }
+    @media (hover: hover) and (pointer: fine){
+      .dpad{ display: none; }
+    }
+
+    /* Modals */
+    .modal{
+      position: fixed; inset: 0;
+      background: rgba(4,6,14,.85);
+      display: grid; place-items: center;
+      z-index: 50;
+      padding: 12px;
+    }
+    .modal[hidden]{ display: none !important; }
+    .modal-card{
+      background: #f4ecd8;
+      color: #1a1a1a;
+      border: 4px solid #0b1020;
+      border-radius: 6px;
+      padding: 18px 20px;
+      max-width: 640px;
+      width: 100%;
+      max-height: 86vh;
+      overflow: auto;
+      box-shadow:
+        inset 0 0 0 2px #b89c63,
+        inset 0 0 0 4px #f4ecd8,
+        0 6px 0 #04060e;
+    }
+    .modal-card h2, .modal-card h3{ color: #1a1a1a; }
+    .modal-card .actions{ margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .modal-card .actions .btn{ background: #2a3460; color: var(--hud-fg); }
+    .modal-card .actions .btn--primary{ background: var(--accent); color: #1a1a1a; }
+    .modal-card .actions .btn--ghost{ background: transparent; color: #1a1a1a; border-color: #1a1a1a; }
+
+    /* Puzzle widgets */
+    .pz-feedback{
+      min-height: 22px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .pz-feedback.ok{ color: #1a6f3a; }
+    .pz-feedback.no{ color: #8a2a1d; }
+
+    .pair-grid{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .pair-grid .col-head{
+      font-family: var(--ui-pixel); font-size: 11px; padding: 4px 0;
+    }
+    .pair-card{
+      background: #fff7e0;
+      border: 3px solid #1a1a1a;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      color: #1a1a1a;
+      font-family: inherit;
+    }
+    .pair-card[aria-pressed="true"]{ background: var(--accent); }
+    .pair-card.matched{ background: #c8eac6; border-color: #1a6f3a; cursor: default; }
+    .pair-card.matched::before{ content: "✓ "; color: #1a6f3a; font-weight: 700; }
+
+    .seq-buttons{
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px;
+    }
+    .seq-btn{
+      padding: 22px;
+      font-size: 22px;
+      border: 3px solid #1a1a1a;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      color: #1a1a1a;
+    }
+    .seq-btn[data-color="A"]{ background: #6ec0ff; }
+    .seq-btn[data-color="B"]{ background: #f2c14e; }
+    .seq-btn[data-color="C"]{ background: #c64dc6; }
+    .seq-btn[data-color="D"]{ background: #7ab564; }
+    .seq-btn.flash{ filter: brightness(1.4); outline: 4px solid #1a1a1a; }
+
+    .scramble-input, .pz-input{
+      font-family: var(--ui-pixel);
+      letter-spacing: 4px;
+      font-size: 18px;
+      padding: 10px;
+      width: 100%;
+      max-width: 280px;
+      text-transform: uppercase;
+      border: 3px solid #1a1a1a;
+      border-radius: 4px;
+      background: #fff;
+      color: #1a1a1a;
+    }
+    .pz-input{ letter-spacing: normal; text-transform: none; }
+
+    .maze-grid{
+      display: grid;
+      gap: 2px;
+      background: #1a1a1a;
+      padding: 2px;
+      border: 3px solid #1a1a1a;
+      width: max-content;
+      margin: 10px auto;
+    }
+    .maze-cell{
+      width: 36px; height: 36px;
+      background: #fff7e0;
+      display: grid; place-items: center;
+      font-size: 16px;
+    }
+    .maze-cell.wall{ background: #1a1a1a; }
+    .maze-cell.start{ background: #c8eac6; }
+    .maze-cell.end{ background: var(--accent); }
+    .maze-cell.you{ background: var(--c-sky); }
+
+    .image-grid{
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;
+    }
+    .image-tile{
+      aspect-ratio: 1;
+      background: #fff7e0;
+      border: 3px solid #1a1a1a;
+      border-radius: 6px;
+      cursor: pointer;
+      display: grid; place-items: center;
+      font-size: 28px;
+      color: #1a1a1a;
+    }
+    .image-tile[aria-pressed="true"]{ background: var(--accent); }
+
+    .logic-grid{
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+      margin-top: 10px;
+    }
+    .logic-grid select{
+      font-family: inherit; font-size: 16px;
+      padding: 8px;
+      border: 3px solid #1a1a1a; border-radius: 4px;
+      background: #fff; color: #1a1a1a;
+    }
+
+    .pattern-row{
+      display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap;
+    }
+    .pattern-cell{
+      width: 48px; height: 48px;
+      background: #fff7e0;
+      border: 3px solid #1a1a1a;
+      border-radius: 4px;
+      display: grid; place-items: center;
+      font-size: 22px;
+      color: #1a1a1a;
+    }
+    .pattern-cell.q{ background: var(--accent); color: #1a1a1a; }
+    .pattern-options{
+      display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+    }
+
+    /* Item-get */
+    .item-get{
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      background: rgba(11,16,32,.9);
+      color: var(--accent);
+      text-align: center;
+      padding: 16px;
+    }
+    .item-get .big{
+      font-family: var(--ui-pixel); font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .item-get .glyph{
+      font-size: 56px; margin-bottom: 8px;
+    }
+
+    /* References */
+    .refs-body{
+      background: var(--c-paper);
+      color: #1a1a1a;
+      padding: 18px 22px;
+      border: 4px solid #0b1020;
+      border-radius: 6px;
+      max-height: 70vh; overflow: auto;
+      box-shadow:
+        inset 0 0 0 2px #b89c63,
+        inset 0 0 0 4px var(--c-paper);
+    }
+    .refs-body h3{ margin-top: 14px; color: #1a1a1a; }
+    .refs-body ul{ margin: 4px 0 0; padding-left: 18px; }
+    .refs-body li{ margin: 4px 0; font-size: 14px; }
+
+    /* Final certificate */
+    .cert{
+      background: var(--c-paper);
+      color: #1a1a1a;
+      border: 4px double #6b4c12;
+      padding: 22px;
+      text-align: center;
+      border-radius: 6px;
+    }
+    .cert h2{ color: #6b4c12; }
+    .cert .name{
+      font-family: var(--ui-pixel); font-size: 18px; margin: 10px 0;
+      color: #1a1a1a;
+    }
+    .badge-grid{
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px; margin: 12px 0;
+    }
+    .badge{
+      background: #fff7e0;
+      border: 3px solid #6b4c12;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 12px;
+      text-align: center;
+    }
+    .badge.dim{ opacity: .35; }
+    .badge .glyph{ font-size: 28px; display: block; }
+
+    /* Heilmeier scroll */
+    .scroll{
+      background: var(--c-paper);
+      color: #1a1a1a;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: 4px solid #6b4c12;
+    }
+    .scroll ol{ margin: 6px 0 0 18px; padding: 0; }
+    .scroll li{ margin: 4px 0; }
+
+    /* Print styles for References */
+    @media print{
+      body{ background: #fff !important; color: #000; }
+      #app .panel{ display: none; }
+      .modal{ position: static !important; background: transparent !important; padding: 0; }
+      .modal-card{ background: #fff !important; box-shadow: none !important; border: 1px solid #000 !important; max-height: none; }
+      .refs-body{ background: #fff !important; box-shadow: none !important; border: none !important; max-height: none; }
+      h1,h2,h3{ font-family: serif !important; }
+      .btn, .actions{ display: none !important; }
+    }
+
+    /* Responsive */
+    @media (max-width: 540px){
+      #hud{ font-size: 10px; }
+      .btn{ padding: 10px 12px; font-size: 12px; }
+      .btn--big{ padding: 14px; font-size: 13px; }
+      .pattern-cell{ width: 40px; height: 40px; font-size: 18px; }
+      .maze-cell{ width: 28px; height: 28px; font-size: 14px; }
+    }
+
+    /* Keyboard key chips in the help modal */
+    kbd{
+      display: inline-block;
+      padding: 2px 6px;
+      margin: 0 2px;
+      font-family: var(--ui-pixel);
+      font-size: 12px;
+      border: 2px solid #1a1a1a;
+      border-bottom-width: 3px;
+      border-radius: 4px;
+      background: #fff;
+      color: #1a1a1a;
+      box-shadow: 0 1px 0 #1a1a1a;
+    }
+
+    /* Visually hidden (for a11y labels) */
+    .sr-only{
+      position: absolute !important;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
+
+    /* Codex finale animations */
+    .codex-slot{
+      display: inline-block;
+      width: 1.1em;
+      text-align: center;
+      opacity: 0.18;
+      transition: opacity .2s;
+    }
+    .codex-pop{
+      opacity: 1 !important;
+      animation: codexPop 0.55s cubic-bezier(.2,.9,.3,1.4) both;
+    }
+    @keyframes codexPop{
+      0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+      55%  { transform: scale(1.55) rotate(6deg);  opacity: 1; }
+      100% { transform: scale(1)    rotate(0);     opacity: 1; }
+    }
+    .sparkle{
+      position: absolute;
+      font-size: 22px;
+      pointer-events: none;
+      animation: sparkleFly 1.5s ease forwards;
+      filter: drop-shadow(0 0 4px var(--accent));
+    }
+    @keyframes sparkleFly{
+      0%   { transform: translate(0,0)    scale(0.3); opacity: 0; }
+      20%  {                                opacity: 1; }
+      100% { transform: translate(0,-70px) scale(1.6); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .codex-pop{ animation: none; }
+      .sparkle{ display: none; }
+    }
+
+    /* Final certificate celebration glow */
+    .cert-celebrate{
+      animation: certGlow 2.4s ease infinite alternate;
+    }
+    @keyframes certGlow{
+      from { box-shadow: 0 0 0 0 rgba(242,193,78,0); }
+      to   { box-shadow: 0 0 24px 6px rgba(242,193,78,0.6); }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .cert-celebrate{ animation: none; }
+    }
+
+    /* Bonk shake */
+    .bonk{ animation: bonk .12s ease 1; }
+    @keyframes bonk{
+      0%{ transform: translate(0,0); }
+      25%{ transform: translate(-3px,1px); }
+      50%{ transform: translate(2px,-1px); }
+      100%{ transform: translate(0,0); }
+    }
+    @media (prefers-reduced-motion: reduce){ .bonk{ animation: none; } }
+  </style>
+</head>
+<body>
+  <div id="app" role="application" aria-label="Quest for DARPA">
+
+    <!-- ============================== TITLE ============================ -->
+    <section id="screen-title" class="screen panel is-active" aria-labelledby="title-h">
+      <div class="title-art">
+        <svg class="shield-svg" viewBox="0 0 32 40" aria-label="Stylized DARPA homage shield"
+             xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+          <!-- Shield silhouette in classic blue with stars; original artwork, not the official seal. -->
+          <path d="M2 2 H30 V20 Q30 32 16 38 Q2 32 2 20 Z" fill="#2a6db0" stroke="#0b1020" stroke-width="2"/>
+          <path d="M5 5 H27 V20 Q27 30 16 35 Q5 30 5 20 Z" fill="#1a4878" stroke="#0b1020" stroke-width="1"/>
+          <!-- Stars -->
+          <g fill="#f4ecd8">
+            <rect x="9" y="9"  width="2" height="2"/>
+            <rect x="15" y="9" width="2" height="2"/>
+            <rect x="21" y="9" width="2" height="2"/>
+            <rect x="11" y="14" width="2" height="2"/>
+            <rect x="19" y="14" width="2" height="2"/>
+            <rect x="15" y="19" width="2" height="2"/>
+          </g>
+        </svg>
+        <h1 id="title-h" class="title-logo">QUEST FOR<br/>DARPA</h1>
+        <div class="title-sub">The Legend of Jason CIO</div>
+        <canvas class="hero-canvas" id="title-hero" width="48" height="48" aria-hidden="true"></canvas>
+        <div class="title-actions">
+          <button class="btn btn--primary btn--big" id="btn-start">START</button>
+          <button class="btn" id="btn-help-title">HOW TO PLAY</button>
+          <button class="btn" id="btn-settings">SETTINGS</button>
+          <button class="btn btn--ghost" id="btn-refs">CREDITS &amp; REFERENCES</button>
+        </div>
+        <p class="tiny dim center" style="max-width: 520px; margin: 8px auto 0;">
+          A short adventure through ~75 years of AI history. Built for a family-day booth.
+          Tip: try the Konami code on this screen.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============================== TIER ============================= -->
+    <section id="screen-tier" class="screen panel" aria-labelledby="tier-h">
+      <h1 id="tier-h">Choose your Explorer rank</h1>
+      <p class="small dim">Pick the tier closest to the player's age. Puzzles, words, and hints adjust to fit. A parent can flip on Family Co-op for always-on hints.</p>
+      <div class="tier-grid" role="radiogroup" aria-label="Age tier">
+        <button class="tier-card" role="radio" aria-pressed="false" data-tier="sprout">
+          <div class="tier-name">SPROUT</div>
+          <div class="small">Ages 5–7</div>
+          <p class="small dim">Big buttons. Match-the-pair, color sequences, drag &amp; drop. Generous hints.</p>
+        </button>
+        <button class="tier-card" role="radio" aria-pressed="false" data-tier="cadet">
+          <div class="tier-name">CADET</div>
+          <div class="small">Ages 8–10</div>
+          <p class="small dim">Word scrambles, memory patterns, image classification, small mazes.</p>
+        </button>
+        <button class="tier-card" role="radio" aria-pressed="false" data-tier="operative">
+          <div class="tier-name">OPERATIVE</div>
+          <div class="small">Ages 11–14</div>
+          <p class="small dim">Caesar ciphers, logic grids, pathfinding, pattern completion.</p>
+        </button>
+      </div>
+      <div class="row">
+        <label class="row" style="gap:6px;">
+          <input type="checkbox" id="opt-coop" />
+          <span>Family Co-op (always-on hints)</span>
+        </label>
+        <span class="grow"></span>
+        <button class="btn btn--ghost" id="tier-back">← Back</button>
+        <button class="btn btn--primary" id="tier-next" disabled>Next →</button>
+      </div>
+    </section>
+
+    <!-- ============================== HERO ============================= -->
+    <section id="screen-hero" class="screen panel" aria-labelledby="hero-h">
+      <h1 id="hero-h">It's dangerous to go alone — take this.</h1>
+      <div class="row" style="align-items:flex-start; gap: 18px;">
+        <canvas id="hero-preview" class="hero-canvas" width="48" height="48" aria-label="Jason CIO preview"></canvas>
+        <div class="grow">
+          <p class="small">Jason CIO hands you the <strong>stylus-sword</strong>. He's ready when you are.</p>
+          <div class="field">
+            <label for="hero-name">Your first name (1–12 letters, just for the run):</label>
+            <input id="hero-name" type="text" maxlength="12" autocomplete="off" autocapitalize="words" placeholder="Explorer" />
+          </div>
+          <div class="field">
+            <label>Tunic color:</label>
+            <div class="swatch-row" role="radiogroup" aria-label="Tunic color">
+              <button class="swatch s-green" role="radio" aria-pressed="true"  data-tunic="green" aria-label="Green tunic"></button>
+              <button class="swatch s-blue"  role="radio" aria-pressed="false" data-tunic="blue"  aria-label="Blue tunic"
+                      style="background: var(--c-sky-dk);"></button>
+              <button class="swatch s-red"   role="radio" aria-pressed="false" data-tunic="red"   aria-label="Red tunic"></button>
+              <button class="swatch s-gold"  role="radio" aria-pressed="false" data-tunic="gold"  aria-label="DARPA HARD gold tunic (locked)"
+                      id="swatch-gold" hidden></button>
+            </div>
+            <p class="tiny dim" id="gold-hint" hidden>You unlocked the DARPA HARD tunic on the title screen. Nice.</p>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 14px;">
+        <button class="btn btn--ghost" id="hero-back">← Back</button>
+        <span class="grow"></span>
+        <button class="btn btn--primary" id="hero-next">Next →</button>
+      </div>
+    </section>
+
+    <!-- ============================== TIMER ============================ -->
+    <section id="screen-timer" class="screen panel" aria-labelledby="timer-h">
+      <h1 id="timer-h">5-minute timer?</h1>
+      <p class="small dim">Family-day booths run on a clock. We recommend leaving the timer on — but the game stays friendly either way. When time runs out you can keep playing untimed.</p>
+      <label class="row" style="gap: 8px;">
+        <input id="opt-timer" type="checkbox" checked />
+        <span>Play with a 5-minute timer (recommended for the booth)</span>
+      </label>
+      <div class="row" style="margin-top: 14px;">
+        <button class="btn btn--ghost" id="timer-back">← Back</button>
+        <span class="grow"></span>
+        <button class="btn btn--primary" id="timer-go">Begin Quest →</button>
+      </div>
+    </section>
+
+    <!-- ============================== GAME ============================= -->
+    <section id="screen-game" class="screen" aria-label="Game stage">
+      <header id="hud" role="status">
+        <div class="col">
+          <span class="pill" id="hud-name">JASON</span>
+          <span class="pill"><span class="badge-tier" id="hud-tier">CADET</span></span>
+        </div>
+        <div class="col" style="justify-content:center;">
+          <span class="pill neurons" id="hud-neurons" aria-label="Neurons">◆ ◆ ◆</span>
+          <span class="pill" id="hud-score">⭐ 0</span>
+          <span class="pill" id="hud-stage">1/6</span>
+          <span class="pill inventory" id="hud-inv" aria-label="Inventory">
+            <span class="slot">⚔</span>
+            <span class="slot empty">·</span>
+            <span class="slot empty">·</span>
+            <span class="slot empty">·</span>
+            <span class="slot empty">·</span>
+            <span class="slot empty">·</span>
+            <span class="slot empty">·</span>
+          </span>
+        </div>
+        <div class="col" style="justify-content:flex-end;">
+          <span class="pill" id="hud-timer" hidden>5:00</span>
+          <button class="btn btn--ghost" id="btn-mute" style="padding:8px;min-height:auto;">🔇</button>
+        </div>
+      </header>
+
+      <div id="stage-area" role="img" aria-label="Game world">
+        <canvas id="stage-canvas" width="320" height="220"></canvas>
+      </div>
+
+      <div id="controls" style="margin-top: 8px;">
+        <div class="dpad" role="group" aria-label="Movement pad">
+          <span class="blank"></span>
+          <button data-key="ArrowUp" aria-label="Up">▲</button>
+          <span class="blank"></span>
+          <button data-key="ArrowLeft" aria-label="Left">◀</button>
+          <button class="a" data-key="Enter" aria-label="Action">A</button>
+          <button data-key="ArrowRight" aria-label="Right">▶</button>
+          <span class="blank"></span>
+          <button data-key="ArrowDown" aria-label="Down">▼</button>
+          <span class="blank"></span>
+        </div>
+        <div class="group" style="justify-content:center;">
+          <button class="btn" id="btn-pause">⏸ Pause</button>
+          <button class="btn" id="btn-map">🗺 Map</button>
+          <button class="btn" id="btn-help">❓ Help</button>
+          <button class="btn btn--ghost" id="btn-game-refs">📜 Refs</button>
+          <button class="btn btn--ghost" id="btn-quit">⏻ Quit</button>
+        </div>
+        <div class="group" style="justify-content:flex-end;">
+          <select id="debug-jump" hidden></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== FINAL ============================ -->
+    <section id="screen-final" class="screen panel" aria-labelledby="final-h">
+      <h1 id="final-h">Quest complete, Explorer!</h1>
+      <div class="cert">
+        <h2>DARPA EXPLORER CERTIFICATE</h2>
+        <div class="name" id="cert-name">—</div>
+        <p>has journeyed through ~75 years of AI history with Jason CIO,
+           from Turing's 1950 question to today's transformer-powered agents,
+           and ignited the <strong>Codex of Sparks</strong>.</p>
+        <div class="row" style="justify-content: center; gap: 18px; margin: 8px 0 12px;">
+          <span class="pill">⭐ <span id="cert-score">0</span> points</span>
+          <span class="pill">🏅 <span id="cert-badges">0</span>/6 stage badges</span>
+          <span class="pill">🔎 <span id="cert-eggs">0</span>/7 hidden secrets</span>
+        </div>
+        <div class="badge-grid" id="cert-badge-grid"></div>
+        <p class="tiny dim">~75 years in 5 minutes. DARPA-funded research helped seed the internet,
+           autonomous vehicles, GPS, voice recognition, and modern AI.</p>
+      </div>
+      <div class="row" style="margin-top: 12px; justify-content: center;">
+        <button class="btn btn--primary" id="final-again">Play Again</button>
+        <button class="btn" id="final-tier">Try a Different Age</button>
+        <button class="btn btn--ghost" id="final-refs">References</button>
+        <button class="btn btn--ghost" id="final-print" onclick="window.print()">Print</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ============================== MODALS ============================== -->
+
+  <!-- Settings -->
+  <div class="modal" id="modal-settings" hidden role="dialog" aria-modal="true" aria-labelledby="settings-h">
+    <div class="modal-card">
+      <h2 id="settings-h">Settings</h2>
+      <label class="row" style="gap:6px;">
+        <input type="checkbox" id="set-sound" />
+        <span>Sound effects</span>
+      </label>
+      <label class="row" style="gap:6px;">
+        <input type="checkbox" id="set-scan" />
+        <span>CRT scanlines &amp; vignette</span>
+      </label>
+      <label class="row" style="gap:6px;">
+        <input type="checkbox" id="set-reduced" />
+        <span>Reduced motion (mirrors system setting)</span>
+      </label>
+      <p class="tiny dim">No data is saved between sessions. Refresh the page to start fresh.</p>
+      <div class="actions">
+        <button class="btn btn--primary" data-close="modal-settings">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- References -->
+  <div class="modal" id="modal-refs" hidden role="dialog" aria-modal="true" aria-labelledby="refs-h">
+    <div class="modal-card" style="max-width: 760px;">
+      <h2 id="refs-h">References &amp; sources</h2>
+      <p class="small dim">Sources verified by the developer — please double-check before citing in school work.</p>
+      <div class="refs-body" id="refs-content"></div>
+      <div class="actions">
+        <button class="btn" onclick="window.print()">🖨 Print</button>
+        <button class="btn btn--primary" data-close="modal-refs">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog (in-game NPC / sign reader) -->
+  <div class="modal" id="modal-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="dialog-h">
+    <div class="modal-card">
+      <h3 id="dialog-h">—</h3>
+      <div id="dialog-body" class="small"></div>
+      <div class="actions">
+        <button class="btn btn--primary" data-close="modal-dialog">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map / ARPANET overworld -->
+  <div class="modal" id="modal-map" hidden role="dialog" aria-modal="true" aria-labelledby="map-h">
+    <div class="modal-card">
+      <h2 id="map-h">ARPANET Map — your quest</h2>
+      <p class="small dim">Six stages, one per AI era. Walk to the glowing portal in the hub to enter.</p>
+      <div id="map-body"></div>
+      <div class="actions">
+        <button class="btn btn--primary" data-close="modal-map">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div class="modal" id="modal-pause" hidden role="dialog" aria-modal="true" aria-labelledby="pause-h">
+    <div class="modal-card center">
+      <h2 id="pause-h">Take a breath, Explorer.</h2>
+      <p class="small dim">The clock is paused.</p>
+      <div class="actions" style="justify-content:center;">
+        <button class="btn btn--primary" data-close="modal-pause">Resume</button>
+        <button class="btn" id="pause-refs">References</button>
+        <button class="btn btn--ghost" id="pause-quit">Quit to title</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Puzzle -->
+  <div class="modal" id="modal-puzzle" hidden role="dialog" aria-modal="true" aria-labelledby="pz-h">
+    <div class="modal-card">
+      <h3 id="pz-h">Puzzle</h3>
+      <p class="small" id="pz-prompt">—</p>
+      <div id="pz-body"></div>
+      <div class="pz-feedback" id="pz-feedback" aria-live="polite"></div>
+      <div class="actions">
+        <button class="btn" id="pz-hint">💡 Hint</button>
+        <button class="btn" id="pz-skip" hidden>↪ Skip</button>
+        <button class="btn btn--primary" id="pz-submit" hidden>Submit</button>
+        <button class="btn btn--ghost" id="pz-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item Get -->
+  <div class="modal" id="modal-itemget" hidden role="dialog" aria-modal="true" aria-labelledby="ig-h">
+    <div class="modal-card center">
+      <div class="glyph" id="ig-glyph" style="font-size: 56px;">⚔</div>
+      <h3 id="ig-h">You got the —!</h3>
+      <p class="small" id="ig-desc">—</p>
+      <div class="actions" style="justify-content: center;">
+        <button class="btn btn--primary" data-close="modal-itemget">Onward!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time's up -->
+  <div class="modal" id="modal-timeup" hidden role="dialog" aria-modal="true" aria-labelledby="tu-h">
+    <div class="modal-card center">
+      <h2 id="tu-h">Time's up, great job!</h2>
+      <p class="small" id="tu-msg">—</p>
+      <div class="actions" style="justify-content: center;">
+        <button class="btn btn--primary" id="tu-untimed">Keep playing untimed</button>
+        <button class="btn" id="tu-end">See my certificate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help / Key legend -->
+  <div class="modal" id="modal-help" hidden role="dialog" aria-modal="true" aria-labelledby="help-h">
+    <div class="modal-card">
+      <h2 id="help-h">How to play</h2>
+      <p class="small"><strong>🎯 Goal.</strong> Walk to each glowing portal (1–6), solve the puzzle inside, and pick up the artifact. Bring all 6 to the Codex pedestal in the middle of the hub to win.</p>
+      <p class="small"><strong>🕹 Move.</strong> Arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> on a keyboard. The on-screen D-pad on touch.</p>
+      <p class="small"><strong>👉 Interact / continue.</strong> <kbd>Space</kbd> or <kbd>Enter</kbd> on a keyboard. The yellow <strong>A</strong> button on touch.</p>
+      <p class="small"><strong>⏸ Pause.</strong> <kbd>Esc</kbd>, or the ⏸ Pause button. Esc also closes any open dialog.</p>
+      <p class="small"><strong>🔇 Sound.</strong> Off by default. Tap the speaker icon in the HUD to toggle.</p>
+      <p class="small"><strong>💡 Hint &amp; Skip.</strong> Inside any puzzle, tap Hint for a nudge. After 30 seconds you can also Skip — kids never get stuck.</p>
+      <p class="small"><strong>❓ Where to look.</strong> Walk up to glowing portals, signs, robots, blackboards, vacuum tubes, and oddities — then press <kbd>Space</kbd>.</p>
+      <div class="actions">
+        <button class="btn btn--primary" data-close="modal-help">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Final Codex assembly -->
+  <div class="modal" id="modal-codex" hidden role="dialog" aria-modal="true" aria-labelledby="codex-h">
+    <div class="modal-card center">
+      <h2 id="codex-h">The Codex Ignites</h2>
+      <div id="codex-glyphs" style="font-size: 38px; letter-spacing: 6px; margin: 16px 0; min-height: 1.4em;">·</div>
+      <p id="codex-text" class="small" style="min-height: 3em;"></p>
+      <div class="actions" style="justify-content: center;">
+        <button class="btn btn--primary" id="codex-go">View Certificate →</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =============================================================================
+   Q — single namespace. The entire game lives on this object.
+   ========================================================================== */
+"use strict";
+
+const Q = (() => {
+
+  /* ------- DEBUG flag (default false). Flip to expose stage-jump dropdown. -- */
+  const DEBUG = false;
+
+  /* ------- All user-facing strings in one place ---------------------------- */
+  const STRINGS = {
+    title: "QUEST FOR DARPA",
+    subtitle: "The Legend of Jason CIO",
+    welcome: name => `Welcome, ${name} — Jason CIO awaits.`,
+    timeUp: name => `Great job, Explorer ${name || "Friend"}! You can keep going untimed if you like.`,
+    encouragements: [
+      "Not quite — try again!",
+      "Close! Look again.",
+      "Almost — you've got this.",
+      "Hmm, give it another go.",
+      "So close — try one more time."
+    ],
+    correct: [
+      "Yes! Nicely done.",
+      "Got it! On we go.",
+      "That's the one!",
+      "Spot on, Explorer."
+    ],
+    tierNames: { sprout: "SPROUT", cadet: "CADET", operative: "OPERATIVE" },
+
+    // The opening story. Shown once per run when the player first arrives in the hub.
+    preamble:
+      "The Codex of Sparks has gone dim. Long ago, six artifacts powered it — one for each era of AI research, from Turing's question (1950) to today's transformers (2026).\n\nThe Codex sits dim in the middle of the ARPANET hub, waiting. Your mission, Explorer:\n\n1. Walk to each glowing portal (1 through 6).\n2. Solve the small puzzle inside each one.\n3. Claim the artifact that the puzzle reveals.\n4. When you have all six, return to the Codex pedestal in the center of the hub and ignite it.\n\nYou'll have walked through about 75 years of AI in five minutes.\n\nMove with WASD or the arrow keys. Press Space or Enter to interact (or the yellow A button on touch). Tap ❓ Help anytime.",
+
+    // Per-stage teaching brief shown BEFORE the puzzle. Teaches the era's facts
+    // so the puzzle that follows is an application of what was just taught.
+    stageIntros: [
+      { title: "Stage 1: The Spark — your mission",
+        text: "Welcome to the dawn of computing — the 1940s and 1950s. Three big things happened:\n\n• In 1950, Alan Turing wrote a paper asking 'can machines think?' That became the Turing Test.\n• In 1956, John McCarthy organized a workshop at Dartmouth that gave the field its name: 'artificial intelligence'.\n• Computers back then ran on glowing glass parts called vacuum tubes.\n\nAt Bletchley Park during WWII, codebreakers used machines to spot patterns in secret messages. The big idea: spot the rule, beat the puzzle.\n\nYour task: spot the pattern and prove your spark." },
+      { title: "Stage 2: First Words — your mission",
+        text: "Welcome to the 1960s. ARPA (the predecessor to DARPA) is funding the first AI labs at MIT, Stanford, and Carnegie Mellon. In 1966 at MIT, Joseph Weizenbaum writes ELIZA — the first famous chatbot. ELIZA pretended to be a therapist by turning your sentences into questions. People felt understood, even though ELIZA didn't really understand a thing.\n\nIn 1969, ARPANET (the early internet) switches on with four nodes: UCLA, SRI, UCSB, and Utah.\n\nYour task: complete the conversation and finish the milestones." },
+      { title: "Stage 3: The Long Winter — your mission",
+        text: "Welcome to the late 1970s and 1980s. After big promises fell short, AI funding froze — the Lighthill Report (UK, 1973) was a chilly turning point.\n\nBut one approach kept working: 'expert systems' — programs made of strict IF-THEN rules. Stanford's MYCIN suggested antibiotics. Other systems diagnosed equipment faults. They were narrow but reliable: read the rules, follow them, get the answer.\n\nYour task: read the IF-THEN rules carefully and follow the logic to the right answer." },
+      { title: "Stage 4: The Comeback — your mission",
+        text: "Welcome to the 1990s. In May 1997, IBM's Deep Blue defeated world chess champion Garry Kasparov. The trick wasn't 'thinking' — it was searching far ahead, evaluating millions of possible moves per second.\n\nAt the same time, DARPA's DART logistics tool (used during the 1991 Gulf War) was famously said to have repaid DARPA's entire AI investment in one project.\n\nYour task: know your pieces, know your tools — apply what you just learned about Deep Blue." },
+      { title: "Stage 5: The Grand Challenge — your mission",
+        text: "Welcome to the 2000s and early 2010s. DARPA's Grand Challenges (2004, 2005, 2007 Urban Challenge) pushed self-driving cars across the desert. In 2004, no team finished. In 2005, Stanford's 'Stanley' won. Then ImageNet (2009) and AlexNet (2012) taught computers to see.\n\nA self-driving car has two big jobs: spot what matters (other cars, people, signs) and find a safe path through the world.\n\nYour task: do exactly that — spot or steer." },
+      { title: "Stage 6: The Age of Models — your mission",
+        text: "Welcome to today. In March 2016, AlphaGo defeated Go champion Lee Sedol. In 2017, the Transformer architecture was introduced ('Attention Is All You Need'). By the 2020s, large language models and AI agents are everywhere — and they all learn by spotting patterns in long sequences of data.\n\nYour task: continue the pattern, the way a transformer would." }
+    ],
+
+    // Final assembly text shown when the Codex ignites.
+    codexFinale:
+      "Six eras. Six tools. From Turing's 1950 question to today's agents — about 75 years of AI in five minutes. The Codex is lit. Carry the spark forward, Explorer.",
+    items: {
+      stylus:    { glyph: "⚔",  name: "Stylus-Sword",        desc: "Your trusty pixel blade. Bonks walls, pokes blackboards." },
+      tape:      { glyph: "🎞", name: "Turing Tape",         desc: "You got the Turing Tape! Use it to read patterns no one else can." },
+      scroll:    { glyph: "📜", name: "ELIZA Scroll",        desc: "You got the ELIZA Scroll! It listens, then answers with a question." },
+      compass:   { glyph: "🧭", name: "Rule Compass",        desc: "You got the Rule Compass! It survived the Long Winter by following IF-THEN." },
+      shard:     { glyph: "♟", name: "Deep Blue Shard",     desc: "You got the Deep Blue Shard! Thinking many moves ahead just got easier." },
+      key:       { glyph: "🔑", name: "Grand Challenge Key", desc: "You got the Grand Challenge Key! Stanley revs his engine in approval." },
+      crystal:   { glyph: "💎", name: "Transformer Crystal", desc: "You got the Transformer Crystal! Attention is all you need." }
+    },
+    stageNames: [
+      "The Spark",
+      "First Words",
+      "The Long Winter",
+      "The Comeback",
+      "The Grand Challenge",
+      "The Age of Models"
+    ],
+    stageEras: [
+      "1940s–1950s", "1960s–early 1970s", "Late 1970s–1980s",
+      "1990s",       "2000s–early 2010s", "Mid-2010s–today"
+    ],
+    stageEdu: [
+      "In 1950, Alan Turing asked: can a machine convince a person it is human? In 1956, a small summer workshop at Dartmouth College gave the field its name: 'artificial intelligence.'",
+      "ELIZA, written by Joseph Weizenbaum at MIT in 1966, was the first chatbot. It mostly turned what you said into a question. ARPA (later DARPA) funded early AI labs at MIT, Stanford, and CMU.",
+      "In the late 1970s and 1980s, AI research went through 'winters' — funding cuts after big promises proved hard to deliver. Expert systems followed simple IF-THEN rules; some, like MYCIN, were impressive but brittle.",
+      "In May 1997, IBM's Deep Blue defeated world champion Garry Kasparov at chess — a turning point for machines that search far ahead. DARPA's DART logistics tool, used during the 1991 Gulf War, was famously said to have recouped DARPA's entire AI investment.",
+      "DARPA's Grand Challenges (2004, 2005, 2007) pushed self-driving cars from impossible to inevitable. Stanford's 'Stanley' won in 2005. ImageNet (2009) and AlexNet (2012) then kicked off the deep learning era.",
+      "In 2016, AlphaGo beat champion Lee Sedol at Go. In 2017, the Transformer architecture was published. By the 2020s, large language models and agentic AI were everywhere. About 75 years from Turing's question to today."
+    ],
+    splashes: [
+      "Stage 1: The Spark",
+      "Stage 2: First Words",
+      "Stage 3: The Long Winter",
+      "Stage 4: The Comeback",
+      "Stage 5: The Grand Challenge",
+      "Stage 6: The Age of Models"
+    ],
+    arpanet: {
+      ucla:  "UCLA — first ARPANET node, October 1969. The first message: 'lo' (it crashed before it could send 'login').",
+      sri:   "SRI — second ARPANET node, 1969. Also home of Shakey the Robot and Engelbart's 'Mother of All Demos'.",
+      ucsb:  "UCSB — third ARPANET node, 1969. Four nodes was the start of the whole internet.",
+      utah:  "Utah — fourth ARPANET node, 1969. Pioneers of computer graphics worked here."
+    },
+    offices: {
+      I2O: "Information Innovation Office — works on AI, cybersecurity, and data.",
+      DSO: "Defense Sciences Office — explores foundational science across many fields.",
+      MTO: "Microsystems Technology Office — works on chips, photonics, and quantum.",
+      BTO: "Biological Technologies Office — works on biology, health, and human performance.",
+      STO: "Strategic Technology Office — works on networks, sensors, and platforms.",
+      TTO: "Tactical Technology Office — works on flight, space, and ground systems.",
+      ITO: "Information Technology Office — earlier office that funded internet and AI research."
+    },
+    heilmeier: [
+      "What are you trying to do? (Plain language.)",
+      "How is it done today, and what are the limits?",
+      "What's new in your approach? Why will it succeed?",
+      "Who cares?",
+      "If successful, what difference will it make?",
+      "What are the risks?",
+      "How much will it cost?",
+      "How will progress be measured?"
+    ],
+    stoneTablet: "1969. Four nodes. One idea. Everything else followed."
+  };
+
+  /* ------- Color palette pulled into JS for canvas use --------------------- */
+  const PAL = {
+    ink:    "#0b1020",
+    paper:  "#f4ecd8",
+    grass:  "#4a8a3f",
+    grassD: "#2f5a28",
+    grassL: "#7ab564",
+    stone:  "#8a8576",
+    stoneD: "#5e5a4f",
+    wood:   "#8a5a2b",
+    gold:   "#f2c14e",
+    sky:    "#6ec0ff",
+    skyD:   "#2a6db0",
+    lab:    "#1d2b46",
+    labL:   "#2e4a76",
+    snow:   "#e6f0fb",
+    magenta:"#c64dc6",
+    warn:   "#ff9a3c",
+    flesh:  "#f3c8a6",
+    hair:   "#3a2418",
+    red:    "#b8412c",
+    white:  "#ffffff",
+    black:  "#1a1a1a"
+  };
+
+  /* ------- ROOMS ----------------------------------------------------------
+     Maps are arrays of strings (one per row). Each char is a tile code.
+     Codes:
+       . floor (theme-tinted)
+       # solid wall (theme-tinted)
+       ~ water/decor (passable=false)
+       , floor decor (passable=true)
+       d "door" exit (returns to hub or next stage)
+       p puzzle trigger
+       s sign / scroll
+       n NPC
+       e easter-egg interactable
+       1..6 stage portals (hub only)
+       T stone tablet (hub easter egg)
+       H Heilmeier pillar (hub)
+       U/I/B/M/S/T/A/C banner letters (hub) -- handled as signs by index
+       N ARPANET node (hub)
+     The room object also carries a list of `objects` that overlay tiles
+     with custom data (id, sign text, npc lines, easter egg).
+  -------------------------------------------------------------------------- */
+  const ROOMS = {
+    /* The hub overworld -- ARPANET themed. 20 cols x 11 rows. */
+    hub: {
+      theme: "overworld",
+      cols: 20, rows: 11,
+      map: [
+        "####################",
+        "#..................#",
+        "#.HN..1...2...3...N#",
+        "#..................#",
+        "#..s....s....s....s#",
+        "#.........C........#",
+        "#..,..4...5...6...,#",
+        "#..................#",
+        "#.NT..............N#",
+        "#..................#",
+        "####################"
+      ],
+      objects: [
+        // Stage portals 1..6 keyed by tile char
+        { ch: "1", id: "portal1", kind: "portal", stage: 1 },
+        { ch: "2", id: "portal2", kind: "portal", stage: 2 },
+        { ch: "3", id: "portal3", kind: "portal", stage: 3 },
+        { ch: "4", id: "portal4", kind: "portal", stage: 4 },
+        { ch: "5", id: "portal5", kind: "portal", stage: 5 },
+        { ch: "6", id: "portal6", kind: "portal", stage: 6 },
+        // Heilmeier pillar
+        { ch: "H", id: "heilmeier", kind: "scroll", title: "Heilmeier's Catechism",
+          text: "carved into the pillar:" },
+        // ARPANET nodes (4) -- lookup by position order
+        { ch: "N", id: "node-ucla", kind: "node", node: "ucla" },
+        { ch: "N", id: "node-sri",  kind: "node", node: "sri" },
+        { ch: "N", id: "node-ucsb", kind: "node", node: "ucsb" },
+        { ch: "N", id: "node-utah", kind: "node", node: "utah" },
+        // DARPA office banners on signs (4 visible signs)
+        { ch: "s", id: "banner-i2o", kind: "banner", office: "I2O" },
+        { ch: "s", id: "banner-dso", kind: "banner", office: "DSO" },
+        { ch: "s", id: "banner-mto", kind: "banner", office: "MTO" },
+        { ch: "s", id: "banner-bto", kind: "banner", office: "BTO" },
+        // Floor decor that doubles as flavor (STO/TTO/ITO summary tile)
+        { ch: ",", id: "banner-sto", kind: "banner", office: "STO" },
+        { ch: ",", id: "banner-tto", kind: "banner", office: "TTO" },
+        // Stone tablet easter egg #7
+        { ch: "T", id: "stone-tablet", kind: "egg", egg: "internet",
+          title: "A weathered stone tablet",
+          text: STRINGS.stoneTablet },
+        // Codex of Sparks pedestal -- final assembly point.
+        // Lights up when the player has all 6 stage artifacts.
+        { ch: "C", id: "codex", kind: "codex", title: "The Codex of Sparks" }
+      ]
+    },
+
+    /* Stage 1 — The Spark. Vacuum tubes, punch cards, blackboards.
+       Easter eggs: blackboard bonk x3 -> Turing/ELIZA door (egg #2),
+       hidden behind vacuum tube -> Bombe rotor puzzle (egg #3). */
+    s1: {
+      theme: "lab1",
+      cols: 16, rows: 11,
+      map: [
+        "################",
+        "#..............#",
+        "#.b...........e#",
+        "#..............#",
+        "#....p.........#",
+        "#..............#",
+        "#.....s........#",
+        "#..............#",
+        "#.....v........#",
+        "#......d.......#",
+        "################"
+      ],
+      objects: [
+        { ch: "p", id: "puzzle1", kind: "puzzle", stage: 1 },
+        { ch: "s", id: "sign1", kind: "sign",
+          title: "A chalk-dusted sign",
+          text: "Welcome to The Spark. In 1950 Turing asked: can a machine think? In 1956 Dartmouth gave the field its name." },
+        { ch: "b", id: "blackboard", kind: "egg", egg: "turing",
+          title: "A blackboard covered in equations",
+          text: "Bonk it again — you can almost hear ELIZA whispering..." },
+        { ch: "v", id: "vacuum", kind: "egg", egg: "bombe",
+          title: "A glowing vacuum tube",
+          text: "Behind the tube, you spot rotors..." },
+        { ch: "e", id: "darts1", kind: "sign",
+          title: "Faded poster",
+          text: "Punch cards. Vacuum tubes. Pencils. The first AI lab tools." },
+        { ch: "d", id: "exit", kind: "exit" }
+      ]
+    },
+
+    /* Stage 2 — First Words. Teletype, green text, Shakey wandering. */
+    s2: {
+      theme: "lab2",
+      cols: 16, rows: 11,
+      map: [
+        "################",
+        "#..............#",
+        "#.t..t..t..t...#",
+        "#..............#",
+        "#.....p........#",
+        "#..............#",
+        "#......n.......#",
+        "#..............#",
+        "#.....s........#",
+        "#......d.......#",
+        "################"
+      ],
+      objects: [
+        { ch: "p", id: "puzzle2", kind: "puzzle", stage: 2 },
+        { ch: "s", id: "sign2", kind: "sign",
+          title: "A teletype prints",
+          text: "ELIZA (1966) was the first chatbot. ARPA funded labs at MIT, Stanford, and CMU." },
+        { ch: "n", id: "shakey", kind: "egg", egg: "shakey",
+          title: "Shakey the Robot",
+          text: "BEEP. I am Shakey, SRI 1966–1972, ARPA-funded. I plan, I move, I bump things." },
+        { ch: "t", id: "teletype", kind: "sign",
+          title: "Teletype terminal",
+          text: "> HELLO\\n> HOW DO YOU DO. PLEASE TELL ME YOUR PROBLEM." },
+        { ch: "d", id: "exit", kind: "exit" }
+      ]
+    },
+
+    /* Stage 3 — The Long Winter. Snowy lab, blinking servers. */
+    s3: {
+      theme: "winter",
+      cols: 16, rows: 11,
+      map: [
+        "################",
+        "#..............#",
+        "#..............#",
+        "#..r..r..r..r..#",
+        "#..............#",
+        "#......p.......#",
+        "#..............#",
+        "#.....s........#",
+        "#..............#",
+        "#......d.......#",
+        "################"
+      ],
+      objects: [
+        { ch: "p", id: "puzzle3", kind: "puzzle", stage: 3 },
+        { ch: "s", id: "sign3", kind: "sign",
+          title: "A dusty manual",
+          text: "After the 1973 Lighthill Report and 1980s expert-system bust, AI funding froze. MYCIN (Stanford) showed promise but was brittle." },
+        { ch: "r", id: "rack", kind: "sign",
+          title: "Server rack",
+          text: "BLINK. BLINK. The lights still blink, even when nobody is watching." },
+        { ch: "d", id: "exit", kind: "exit" }
+      ]
+    },
+
+    /* Stage 4 — The Comeback. Chess board, CRT, server rack, CGC bug. */
+    s4: {
+      theme: "lab2",
+      cols: 16, rows: 11,
+      map: [
+        "################",
+        "#..............#",
+        "#..............#",
+        "#......p.......#",
+        "#..............#",
+        "#..s.....e.....#",
+        "#..............#",
+        "#.....c........#",
+        "#..............#",
+        "#......d.......#",
+        "################"
+      ],
+      objects: [
+        { ch: "p", id: "puzzle4", kind: "puzzle", stage: 4 },
+        { ch: "s", id: "sign4", kind: "sign",
+          title: "DART briefing",
+          text: "DART, used during the 1991 Gulf War, was said to have recouped DARPA's entire AI investment." },
+        { ch: "e", id: "deepblue", kind: "sign",
+          title: "Glass case",
+          text: "May 1997: IBM's Deep Blue defeats Garry Kasparov at chess. Search + heuristics + speed." },
+        { ch: "c", id: "cgc-bug", kind: "egg", egg: "cgc",
+          title: "A bug on a pedestal",
+          text: "DARPA Cyber Grand Challenge (DEF CON 24, 2016): the first all-machine hacking contest." },
+        { ch: "d", id: "exit", kind: "exit" }
+      ]
+    },
+
+    /* Stage 5 — Grand Challenge. Desert road, Stanley, dataset images. */
+    s5: {
+      theme: "desert",
+      cols: 16, rows: 11,
+      map: [
+        "################",
+        "#..............#",
+        "#..............#",
+        "#......p.......#",
+        "#..............#",
+        "#.....v........#",
+        "#..............#",
+        "#.s.....r......#",
+        "#..............#",
+        "#......d.......#",
+        "################"
+      ],
+      objects: [
+        { ch: "p", id: "puzzle5", kind: "puzzle", stage: 5 },
+        { ch: "s", id: "sign5", kind: "sign",
+          title: "A road sign",
+          text: "DARPA Grand Challenge: 2004 (no finishers), 2005 Stanford's 'Stanley' wins, 2007 Urban Challenge. ImageNet 2009; AlexNet 2012." },
+        { ch: "v", id: "stanley", kind: "sign",
+          title: "Stanley — Stanford's autonomous VW",
+          text: "Beep beep. Stanley won the 2005 DARPA Grand Challenge across the Mojave." },
+        { ch: "r", id: "rcdoor", kind: "egg", egg: "robotics",
+          title: "A door labeled DRC",
+          text: "The 2015 DARPA Robotics Challenge finals (Pomona, CA) — humanoids drove cars and turned valves." },
+        { ch: "d", id: "exit", kind: "exit" }
+      ]
+    },
+
+    /* Stage 6 — Age of Models. Glowing neural net, Atlas, agents. */
+    s6: {
+      theme: "lab3",
+      cols: 16, rows: 11,
+      map: [
+        "################",
+        "#..............#",
+        "#..............#",
+        "#......p.......#",
+        "#..............#",
+        "#.....n........#",
+        "#..............#",
+        "#.....s........#",
+        "#..............#",
+        "#......d.......#",
+        "################"
+      ],
+      objects: [
+        { ch: "p", id: "puzzle6", kind: "puzzle", stage: 6 },
+        { ch: "s", id: "sign6", kind: "sign",
+          title: "Glowing tablet",
+          text: "March 2016: AlphaGo beats Lee Sedol. 2017: 'Attention Is All You Need' introduces the Transformer." },
+        { ch: "n", id: "atlas", kind: "sign",
+          title: "Atlas the Robot waves",
+          text: "Hi! I'm Atlas, a humanoid robot. Many of my ancestors trained at the DARPA Robotics Challenge." },
+        { ch: "d", id: "exit", kind: "exit" }
+      ]
+    }
+  };
+
+  /* ------- PUZZLES --------------------------------------------------------
+     Each puzzle returns a definition object the modal renderer understands.
+     Three age-tier variants per stage, plus a hint progression and skip-after.
+  -------------------------------------------------------------------------- */
+  const puzzles = (() => {
+    /* ----------------------------------------------------------------------
+       Each puzzle is the *applied* exercise for the era's lesson. The prompt
+       is intentionally verbose so a kid can reread it and follow without an
+       adult. Hints reveal in order: nudge -> stronger nudge -> answer.
+    ---------------------------------------------------------------------- */
+
+    /* ---- Stage 1: The Spark (1940s-50s) -- decode/match a pattern --------- */
+    function s1Sprout(){
+      // SPROUT: match-the-pair. Three big pioneers/things from the lesson.
+      return {
+        kind: "pair",
+        prompt: "You just learned about three things from the dawn of computing. Match each one on the left to what it is on the right. Tap one on the left, then tap its match on the right.",
+        pairs: [
+          ["Alan Turing",   "Asked: 'Can machines think?' (1950)"],
+          ["John McCarthy", "Named the field 'AI' at Dartmouth (1956)"],
+          ["Vacuum tube",   "A glowing glass part inside old computers"]
+        ],
+        hints: [
+          "Turing's famous question is the Turing Test.",
+          "McCarthy ran the 1956 Dartmouth workshop that named 'AI'.",
+          "Vacuum tubes were used before tiny chips were invented."
+        ]
+      };
+    }
+    function s1Cadet(){
+      // CADET: word scramble. Letters are shown big in the prompt and as cells.
+      return {
+        kind: "scramble",
+        prompt: "Codebreakers at Bletchley Park were great at spotting patterns. Here's a small one for you. Unscramble these six letters to spell the last name of the man who, in 1950, asked 'can machines think?'\n\nLetters:  G  N  I  R  U  T",
+        answer: "TURING",
+        hints: [
+          "He proposed the Imitation Game in 1950.",
+          "Six letters. Starts with T, ends with G.",
+          "It spells T-U-R-I-N-G."
+        ]
+      };
+    }
+    function s1Operative(){
+      // OPERATIVE: Caesar cipher. Show example shift to teach the mechanic.
+      return {
+        kind: "cipher",
+        prompt: "At Bletchley Park, codebreakers cracked patterns called CIPHERS. Here's a Caesar cipher: every letter has been shifted FORWARD by 3 (so A becomes D, B becomes E, ..., Z wraps to C).\n\nSlide each letter BACKWARD by 3 to decode the hidden word:\n\n   W  X  U  L  Q  J\n\nExample: W → T (because T + 3 = W), X → U.",
+        answer: "TURING",
+        hints: [
+          "W goes back to T. X goes back to U. Now do the rest.",
+          "Letters in order go back to: T, U, R, I, N, G.",
+          "Answer: TURING."
+        ]
+      };
+    }
+
+    /* ---- Stage 2: First Words (1960s) -- chatbots & ARPANET --------------- */
+    function s2Sprout(){
+      // SPROUT: match-the-pair. Three milestones from the era.
+      return {
+        kind: "pair",
+        prompt: "Three big things happened in early AI. Match each year on the left to what happened in that year on the right. Tap one year, then tap its match.",
+        pairs: [
+          ["1956 — Dartmouth", "The field is named 'AI'"],
+          ["1966 — MIT",       "ELIZA, the first chatbot, is written"],
+          ["1969 — ARPANET",   "The early internet's 4 nodes turn on"]
+        ],
+        hints: [
+          "1956 was the workshop that gave the field its name.",
+          "1966: ELIZA pretended to be a therapist.",
+          "1969 was the internet's birthday — four university nodes."
+        ]
+      };
+    }
+    function s2Cadet(){
+      // CADET: fill in the blank. Word matches the lesson directly.
+      return {
+        kind: "fill",
+        prompt: "ELIZA, written by Joseph Weizenbaum at MIT in 1966, pretended to be a therapist by turning your sentences into questions. People felt understood — but ELIZA didn't really understand.\n\nELIZA was the first famous _______.\n\n(Type the missing word.)",
+        answer: "CHATBOT",
+        hints: [
+          "It chats. It's a 'bot'. Together it spells one word.",
+          "Starts with CHAT.",
+          "Answer: CHATBOT."
+        ]
+      };
+    }
+    function s2Operative(){
+      // OPERATIVE: fill in -- university name. Reinforces ELIZA author/place.
+      return {
+        kind: "fill",
+        prompt: "Joseph Weizenbaum wrote ELIZA in 1966. He worked at one of the most famous research universities in the world, located in Cambridge, Massachusetts. Its short name is just three letters and stands for ___ Institute of Technology.\n\nType the three letters.",
+        answer: "MIT",
+        hints: [
+          "It's in Massachusetts. M-_-_ ?",
+          "Massachusetts Institute of Technology.",
+          "Answer: MIT."
+        ]
+      };
+    }
+
+    /* ---- Stage 3: The Long Winter (late 70s-80s) -- expert systems -------- */
+    function s3Sprout(){
+      // SPROUT: short Simon-says. Frame as "follow the rule order".
+      return {
+        kind: "sequence",
+        prompt: "Old AI 'expert systems' had to follow steps in the right order — like a recipe. Watch the colors flash, then press them in the SAME ORDER. (Easy mode: 3 colors.)",
+        length: 3,
+        hints: [
+          "Watch the full sequence first, then tap.",
+          "Tap them left to right in the order they flashed.",
+          "Press 'Show again' to replay the sequence."
+        ]
+      };
+    }
+    function s3Cadet(){
+      // CADET: 4-step Simon-says.
+      return {
+        kind: "sequence",
+        prompt: "Expert systems followed a strict order of rules. Watch the four colors flash, then press them back in the SAME ORDER.",
+        length: 4,
+        hints: [
+          "Memorize the sequence as it plays — count along.",
+          "Tap 'Show again' to replay if you forget.",
+          "Press the colors left-to-right in order."
+        ]
+      };
+    }
+    function s3Operative(){
+      // OPERATIVE: an actual IF-THEN logic puzzle. Rules are spelled out.
+      return {
+        kind: "logic",
+        prompt: "Read these IF-THEN rules carefully (this is exactly how an expert system works):\n\n  • IF the patient has a cough AND a fever, THEN diagnosis = FLU.\n  • IF the patient has a cough but NO fever, THEN diagnosis = COLD.\n  • IF the patient has a rash, THEN diagnosis = ALLERGY.\n\nA patient walks in with a COUGH and a FEVER.\nWhich rule fires? Pick the diagnosis below.",
+        options: ["cold", "flu", "allergy"],
+        answer: "flu",
+        hints: [
+          "Look for the rule that mentions BOTH cough AND fever.",
+          "Cough + fever = one specific rule.",
+          "Answer: flu."
+        ]
+      };
+    }
+
+    /* ---- Stage 4: The Comeback (1990s) -- Deep Blue / chess --------------- */
+    function s4Sprout(){
+      // SPROUT: match chess piece to its move. Reinforces "Deep Blue won at chess".
+      return {
+        kind: "pair",
+        prompt: "Deep Blue beat the world champion at chess. Each chess piece moves a different way. Match each piece on the left to how it moves on the right.",
+        pairs: [
+          ["Knight ♞", "Jumps in an L-shape"],
+          ["Bishop ♝", "Slides on diagonals"],
+          ["Rook ♜",   "Slides in a straight line (rows or columns)"]
+        ],
+        hints: [
+          "The knight is the only piece that can JUMP over others.",
+          "Bishops only move diagonally.",
+          "Rooks move only across rows or down columns."
+        ]
+      };
+    }
+    function s4Cadet(){
+      // CADET: fill in -- the game Deep Blue played.
+      return {
+        kind: "fill",
+        prompt: "In May 1997, IBM's Deep Blue defeated world champion Garry Kasparov at a famous board game played on 64 black-and-white squares with 32 pieces. Five letters.\n\nWhat game?",
+        answer: "CHESS",
+        hints: [
+          "It has kings, queens, knights, bishops, rooks, and pawns.",
+          "Five letters. Starts with C.",
+          "Answer: CHESS."
+        ]
+      };
+    }
+    function s4Operative(){
+      // OPERATIVE: fill in -- the company. Three letters: IBM.
+      return {
+        kind: "fill",
+        prompt: "Deep Blue was built by an American technology company. Its name is just three letters and stands for International ___ Machines.\n\nWhat are the three letters?",
+        answer: "IBM",
+        hints: [
+          "International — what kind of machines?",
+          "International BUSINESS Machines.",
+          "Answer: IBM."
+        ]
+      };
+    }
+
+    /* ---- Stage 5: The Grand Challenge (2000s) -- self-driving / vision ---- */
+    function s5Sprout(){
+      // SPROUT: image classification. Pick the 2 road things.
+      return {
+        kind: "image",
+        prompt: "A self-driving car (like Stanford's 'Stanley') has to spot the things on the road that matter. Tap the TWO pictures below that a self-driving car must pay close attention to. (Tap a picture again to un-pick it.)",
+        items: [
+          { glyph: "🚦", label: "stoplight", correct: true },
+          { glyph: "🚶", label: "person",   correct: true },
+          { glyph: "🍕", label: "pizza",    correct: false },
+          { glyph: "🪐", label: "planet",   correct: false }
+        ],
+        hints: [
+          "Two of these belong on a road. Two don't.",
+          "Stoplights tell the car when to stop. People can walk in front of cars.",
+          "Pick the stoplight 🚦 and the person 🚶."
+        ]
+      };
+    }
+    function s5Cadet(){
+      // CADET: 5x5 maze. Drive to the goal.
+      return {
+        kind: "maze",
+        prompt: "Self-driving cars also have to plan a SAFE PATH. Drive Stanley (the green square) from the green start tile in the top-left to the GOLD goal tile in the bottom-right. Black tiles are walls. Use the arrow buttons below or arrow keys.",
+        size: 5,
+        // 0 = floor, 1 = wall
+        grid: [
+          [0,0,0,0,0],
+          [1,1,0,1,0],
+          [0,0,0,1,0],
+          [0,1,1,0,0],
+          [0,0,0,0,0]
+        ],
+        start: [0,0], end: [4,4],
+        hints: [
+          "There's a clear path along the right edge.",
+          "Try: right, right, right, right, then down all the way.",
+          "Right ×4, then Down ×4."
+        ]
+      };
+    }
+    function s5Operative(){
+      // OPERATIVE: harder 5x5 maze with extra obstacles.
+      return {
+        kind: "maze",
+        prompt: "Plan a route from the green start (top-left) to the gold goal (bottom-right). Black tiles are blocked walls. Use the arrow keys or arrow buttons.",
+        size: 5,
+        grid: [
+          [0,0,1,0,0],
+          [0,1,1,0,1],
+          [0,0,0,0,1],
+          [1,1,1,0,0],
+          [0,0,0,0,0]
+        ],
+        start: [0,0], end: [4,4],
+        hints: [
+          "Look for the column with no walls all the way down.",
+          "Try Down, Down, Right, Right, Down, Down, Right, Right.",
+          "Path: Down ×2, Right ×2, Down ×2, Right ×2."
+        ]
+      };
+    }
+
+    /* ---- Stage 6: The Age of Models (mid-2010s-today) -- pattern next ----- */
+    /* Pattern puzzles use an explicit `sequence` array (renderer reads it
+       directly), so multi-character or emoji elements display correctly. */
+    function s6Sprout(){
+      return {
+        kind: "pattern",
+        prompt: "Modern AI models are pattern-spotters. They notice 'this, then that, then this, then that...' and predict what comes next. Look at the colored circles below. Tap the circle that comes next.",
+        sequence: ["🔵","🟡","🔵","🟡"],
+        options: ["🔵","🟡","🟢"],
+        answer: "🔵",
+        hints: [
+          "It goes blue, yellow, blue, yellow... what's next?",
+          "After yellow, it's always blue.",
+          "Answer: 🔵 (the blue circle)."
+        ]
+      };
+    }
+    function s6Cadet(){
+      return {
+        kind: "pattern",
+        prompt: "Transformers (the AI architecture from 2017) are very good at spotting patterns in long sequences. Here's a number pattern. Each number is the one before it PLUS 2. What comes next?",
+        sequence: ["2","4","6","8"],
+        options: ["9","10","12"],
+        answer: "10",
+        hints: [
+          "Each number goes up by 2.",
+          "8 + 2 = ?",
+          "Answer: 10."
+        ]
+      };
+    }
+    function s6Operative(){
+      return {
+        kind: "pattern",
+        prompt: "This is the famous Fibonacci sequence — each number equals the SUM of the two numbers before it. Modern AI models spot patterns this subtle in millions of data points. What comes next?",
+        sequence: ["1","1","2","3","5"],
+        options: ["6","7","8"],
+        answer: "8",
+        hints: [
+          "Add the previous two numbers each time.",
+          "3 + 5 = ?",
+          "Answer: 8."
+        ]
+      };
+    }
+
+    return {
+      1: { sprout: s1Sprout, cadet: s1Cadet, operative: s1Operative },
+      2: { sprout: s2Sprout, cadet: s2Cadet, operative: s2Operative },
+      3: { sprout: s3Sprout, cadet: s3Cadet, operative: s3Operative },
+      4: { sprout: s4Sprout, cadet: s4Cadet, operative: s4Operative },
+      5: { sprout: s5Sprout, cadet: s5Cadet, operative: s5Operative },
+      6: { sprout: s6Sprout, cadet: s6Cadet, operative: s6Operative }
+    };
+  })();
+
+  /* ------- AUDIO (Web Audio synthesized; muted by default) ----------------- */
+  const audio = (() => {
+    let ctx = null;
+    function ensure(){
+      if(ctx) return ctx;
+      try { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e) { ctx = null; }
+      return ctx;
+    }
+    function blip(freq, dur, type="square", vol=0.06){
+      if(state.mute) return;
+      const c = ensure(); if(!c) return;
+      const o = c.createOscillator(); const g = c.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.value = vol;
+      o.connect(g); g.connect(c.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+      o.stop(c.currentTime + dur);
+    }
+    return {
+      ok(){ blip(720, 0.10, "square"); setTimeout(()=>blip(960,0.10),90); },
+      no(){ blip(220, 0.12, "sawtooth"); },
+      bonk(){ blip(120, 0.06, "square"); },
+      step(){ blip(420, 0.02, "square", 0.02); },
+      itemGet(){
+        if(state.mute) return;
+        const c = ensure(); if(!c) return;
+        const notes = [523, 659, 784, 1046];
+        notes.forEach((n,i)=> setTimeout(()=>blip(n, 0.12, "square"), i*110));
+      },
+      eggGet(){
+        if(state.mute) return;
+        const notes = [659, 880, 1175];
+        notes.forEach((n,i)=> setTimeout(()=>blip(n, 0.10, "triangle"), i*90));
+      },
+      stage(){
+        if(state.mute) return;
+        const notes = [440, 660, 880];
+        notes.forEach((n,i)=> setTimeout(()=>blip(n, 0.14, "square"), i*120));
+      },
+      // Triumphant ascending arpeggio to open the final assembly.
+      fanfare(){
+        if(state.mute) return;
+        [
+          [262, 0.18,   0],   // C4
+          [330, 0.18,  90],   // E4
+          [392, 0.18, 180],   // G4
+          [523, 0.30, 280],   // C5
+          [659, 0.30, 380],   // E5
+          [784, 0.50, 480],   // G5 held
+        ].forEach(([f,d,t]) => setTimeout(()=> blip(f, d, "triangle", 0.05), t));
+      },
+      // Big held major chord -- played when all 6 artifacts have lit up.
+      bigChord(){
+        if(state.mute) return;
+        [
+          [523, 1.00,    0],  // C5
+          [659, 1.00,    0],  // E5
+          [784, 1.00,    0],  // G5
+          [1047, 0.80, 250],  // C6
+          [1318, 0.60, 500],  // E6
+          [1568, 1.40, 750],  // G6 high
+        ].forEach(([f,d,t]) => setTimeout(()=> blip(f, d, "triangle", 0.04), t));
+      }
+    };
+  })();
+
+  /* ------- GAME STATE ------------------------------------------------------ */
+  const state = {
+    screen: "title",
+    tier: null,
+    coop: false,
+    timerOn: true,
+    name: "",
+    tunic: "green",
+    mute: true,
+    crt: false,
+    reduced: false,
+
+    timerStart: 0,
+    timerLeft: 5*60*1000,
+    timerPausedAt: 0,
+    paused: false,
+    timeUpShown: false,
+
+    score: 0,
+    neurons: 3,
+    stagesCleared: new Set(),
+    badges: new Set(),
+    inventory: ["stylus"], // start with stylus-sword
+    eastereggsFound: new Set(),
+
+    // Per-stage attempts for star rating + hint usage
+    attempts: {1:0,2:0,3:0,4:0,5:0,6:0},
+    hintsUsedFor: new Set(),
+
+    // World
+    currentRoom: null,
+    hero: { x: 32, y: 80, dir: "down", frame: 0, moving: false },
+    blackboardBonks: 0,
+
+    // Konami
+    konami: { progress: 0, codes: ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"] }
+  };
+
+  /* ------- UI HELPERS ------------------------------------------------------ */
+  const ui = {
+    $: sel => document.querySelector(sel),
+    $$: sel => Array.from(document.querySelectorAll(sel)),
+    show(id){
+      ui.$$(".screen").forEach(s => s.classList.remove("is-active"));
+      ui.$("#screen-"+id).classList.add("is-active");
+      state.screen = id;
+    },
+    openModal(id){
+      const m = ui.$("#"+id);
+      if(!m) return;
+      m.hidden = false;
+      const focusable = m.querySelector("button, input, select, textarea, [tabindex]");
+      if(focusable) focusable.focus();
+    },
+    closeModal(id){
+      const m = ui.$("#"+id);
+      if(m) m.hidden = true;
+    },
+    closeAllModals(){
+      ui.$$(".modal").forEach(m => m.hidden = true);
+    },
+    setHud(){
+      ui.$("#hud-name").textContent = (state.name || "JASON").toUpperCase();
+      ui.$("#hud-tier").textContent = (STRINGS.tierNames[state.tier] || "—");
+      ui.$("#hud-score").textContent = "⭐ "+state.score;
+      const stageNum = state.currentRoom && state.currentRoom.id !== "hub" ? state.currentRoom.stageNum : (state.stagesCleared.size+1);
+      ui.$("#hud-stage").textContent = (Math.min(6, stageNum||1))+"/6";
+      // neurons
+      const n = state.neurons;
+      ui.$("#hud-neurons").textContent = "◆ ".repeat(n) + "◇ ".repeat(3-n);
+      // inventory: stylus + earned items
+      const slots = ui.$("#hud-inv");
+      slots.innerHTML = "";
+      const items = state.inventory.slice(0,7);
+      items.forEach(k => {
+        const sp = document.createElement("span");
+        sp.className = "slot";
+        sp.textContent = STRINGS.items[k]?.glyph || "·";
+        sp.title = STRINGS.items[k]?.name || "";
+        slots.appendChild(sp);
+      });
+      for(let i=items.length; i<7; i++){
+        const sp = document.createElement("span");
+        sp.className = "slot empty";
+        sp.textContent = "·";
+        slots.appendChild(sp);
+      }
+      // mute btn
+      ui.$("#btn-mute").textContent = state.mute ? "🔇" : "🔊";
+      // timer
+      const tEl = ui.$("#hud-timer");
+      if(state.timerOn){
+        tEl.hidden = false;
+        const t = Math.max(0, state.timerLeft);
+        const mm = Math.floor(t/60000);
+        const ss = Math.floor((t%60000)/1000);
+        tEl.textContent = `${mm}:${String(ss).padStart(2,"0")}`;
+        tEl.classList.toggle("warn", t <= 60000 && t > 30000);
+        tEl.classList.toggle("danger", t <= 30000);
+      } else {
+        tEl.hidden = true;
+      }
+    },
+    feedback(el, msg, ok){
+      el.textContent = msg;
+      el.className = "pz-feedback " + (ok ? "ok" : "no");
+    },
+    rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  };
+
+  /* ------- CANVAS RENDERING ------------------------------------------------
+     Stages and hub render to a 16x11-tile canvas (or 20x11 for hub). The
+     hero is a 16x16 sprite drawn programmatically. Themes change tile colors.
+  -------------------------------------------------------------------------- */
+  const TILE = 16;
+  const canvas = ui.$("#stage-canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  function setCanvasSize(cols, rows){
+    canvas.width  = cols * TILE;
+    canvas.height = rows * TILE;
+  }
+
+  // Theme tints define floor/wall colors per room
+  const THEMES = {
+    overworld: { floor: PAL.grass, floorD: PAL.grassD, floorL: PAL.grassL, wall: PAL.stoneD, wallL: PAL.stone, accent: PAL.gold },
+    lab1:      { floor: "#e9dcb6", floorD: "#b89c63", floorL: "#fff7e0", wall: "#5b3c10", wallL: "#8a5a2b", accent: PAL.gold }, // dusty wood/parchment lab
+    lab2:      { floor: PAL.lab,   floorD: "#15203a", floorL: PAL.labL,  wall: "#0a0f1f",  wallL: PAL.labL,  accent: PAL.sky  },
+    lab3:      { floor: "#1a1144", floorD: "#0e0a2a", floorL: "#3a2487", wall: "#0a0726",  wallL: "#5a3ec6", accent: PAL.magenta },
+    winter:    { floor: PAL.snow,  floorD: "#a9c2da", floorL: "#fbffff", wall: "#5a6a82",  wallL: "#8aa0c0", accent: PAL.sky  },
+    desert:    { floor: "#e8c98a", floorD: "#b7965a", floorL: "#fbe9bd", wall: "#8a5a2b",  wallL: "#b78a55", accent: PAL.gold }
+  };
+
+  function tileColors(room, ch){
+    const t = THEMES[room.theme] || THEMES.overworld;
+    if(ch === "#") return [t.wall, t.wallL];
+    return [t.floor, t.floorD, t.floorL];
+  }
+
+  function drawTile(room, gx, gy, ch){
+    const t = THEMES[room.theme] || THEMES.overworld;
+    const px = gx*TILE, py = gy*TILE;
+
+    if(ch === "#"){
+      // Wall
+      ctx.fillStyle = t.wall;
+      ctx.fillRect(px, py, TILE, TILE);
+      ctx.fillStyle = t.wallL;
+      ctx.fillRect(px, py, TILE, 2);
+      ctx.fillRect(px, py, 2, TILE);
+      ctx.fillStyle = "#0006";
+      ctx.fillRect(px+TILE-2, py+2, 2, TILE-2);
+      ctx.fillRect(px+2, py+TILE-2, TILE-2, 2);
+      return;
+    }
+    // Floor base
+    ctx.fillStyle = t.floor;
+    ctx.fillRect(px, py, TILE, TILE);
+    // Subtle pattern dots based on theme
+    ctx.fillStyle = t.floorL;
+    if(room.theme === "overworld"){
+      ctx.fillRect(px+2, py+3, 1, 1);
+      ctx.fillRect(px+10, py+11, 1, 1);
+      ctx.fillRect(px+5, py+8, 1, 1);
+    } else if(room.theme === "winter"){
+      ctx.fillRect(px+4, py+4, 2, 2);
+      ctx.fillRect(px+11, py+10, 2, 2);
+    } else if(room.theme === "desert"){
+      ctx.fillRect(px+3, py+12, 4, 1);
+      ctx.fillRect(px+9, py+5, 3, 1);
+    } else {
+      // labs: small grid lines
+      ctx.fillStyle = t.floorD;
+      ctx.fillRect(px, py+TILE-1, TILE, 1);
+      ctx.fillRect(px+TILE-1, py, 1, TILE);
+    }
+  }
+
+  function drawObject(room, obj){
+    const t = THEMES[room.theme] || THEMES.overworld;
+    const px = obj.x*TILE, py = obj.y*TILE;
+
+    switch(obj.kind){
+      case "exit": {
+        // Door arch
+        ctx.fillStyle = "#2a1a08";
+        ctx.fillRect(px+2, py+2, 12, 14);
+        ctx.fillStyle = PAL.wood;
+        ctx.fillRect(px+3, py+4, 10, 11);
+        ctx.fillStyle = PAL.gold;
+        ctx.fillRect(px+11, py+9, 1, 2);
+        break;
+      }
+      case "puzzle": {
+        // Glowing pedestal
+        const pulse = Math.floor((Date.now()/300)%2);
+        ctx.fillStyle = t.accent;
+        ctx.fillRect(px+3, py+3+pulse, 10, 10);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(px+5, py+5+pulse, 6, 6);
+        ctx.fillStyle = t.accent;
+        ctx.fillRect(px+7, py+7+pulse, 2, 2);
+        break;
+      }
+      case "sign":
+      case "banner": {
+        ctx.fillStyle = PAL.wood;
+        ctx.fillRect(px+2, py+5, 12, 8);
+        ctx.fillStyle = PAL.gold;
+        ctx.fillRect(px+3, py+6, 10, 6);
+        ctx.fillStyle = "#3a2418";
+        ctx.fillRect(px+7, py+13, 2, 3);
+        if(obj.kind === "banner"){
+          ctx.fillStyle = "#1a1a1a";
+          ctx.font = "6px monospace";
+          ctx.fillText(obj.office || "?", px+4, py+11);
+        }
+        break;
+      }
+      case "scroll": { // Heilmeier pillar
+        ctx.fillStyle = PAL.stone;
+        ctx.fillRect(px+3, py+1, 10, 14);
+        ctx.fillStyle = PAL.stoneD;
+        ctx.fillRect(px+3, py+1, 10, 2);
+        ctx.fillRect(px+3, py+13, 10, 2);
+        ctx.fillStyle = "#1a1a1a";
+        for(let i=0;i<3;i++) ctx.fillRect(px+5, py+5+i*2, 6, 1);
+        break;
+      }
+      case "node": { // ARPANET waypoint
+        const pulse = (Math.sin(Date.now()/200)+1)/2;
+        ctx.fillStyle = "#0b1020";
+        ctx.fillRect(px+3, py+3, 10, 10);
+        ctx.fillStyle = `rgba(110,192,255,${0.5+0.5*pulse})`;
+        ctx.fillRect(px+5, py+5, 6, 6);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(px+7, py+7, 2, 2);
+        break;
+      }
+      case "portal": { // stage portal numbered 1..6
+        const cleared = state.stagesCleared.has(obj.stage);
+        const pulse = (Math.sin(Date.now()/250+obj.stage)+1)/2;
+        ctx.fillStyle = cleared ? "#5a8a3f" : "#3a2487";
+        ctx.fillRect(px+1, py+1, 14, 14);
+        ctx.fillStyle = cleared ? "#7ab564" : `rgba(198,77,198,${0.5+0.5*pulse})`;
+        ctx.fillRect(px+3, py+3, 10, 10);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 10px monospace";
+        ctx.fillText(String(obj.stage), px+6, py+11);
+        if(cleared){
+          ctx.fillStyle = PAL.gold;
+          ctx.fillRect(px+11, py+2, 3, 3);
+        }
+        break;
+      }
+      case "codex": {
+        // Codex pedestal: dim purple until all 6 artifacts collected, then glowing gold.
+        const ready = state.inventory.length >= 7; // stylus + 6 stage items
+        const pulse = (Math.sin(Date.now()/220)+1)/2;
+        // Stone base
+        ctx.fillStyle = PAL.stoneD;
+        ctx.fillRect(px+1, py+11, 14, 4);
+        ctx.fillStyle = PAL.stone;
+        ctx.fillRect(px+2, py+12, 12, 3);
+        // Pedestal cube
+        ctx.fillStyle = "#0b1020";
+        ctx.fillRect(px+3, py+2, 10, 10);
+        ctx.fillStyle = ready ? `rgba(242,193,78,${0.45+0.55*pulse})` : "#3a3460";
+        ctx.fillRect(px+4, py+3, 8, 8);
+        ctx.fillStyle = ready ? "#fff" : "#5a5a8a";
+        ctx.fillRect(px+6, py+5, 4, 4);
+        if(ready){
+          // Sparkle corners
+          ctx.fillStyle = PAL.gold;
+          ctx.fillRect(px+5, py+2, 1, 1);
+          ctx.fillRect(px+10, py+2, 1, 1);
+          ctx.fillRect(px+2, py+7, 1, 1);
+          ctx.fillRect(px+13, py+7, 1, 1);
+        }
+        break;
+      }
+      case "egg": {
+        switch(obj.egg){
+          case "internet": { // stone tablet
+            ctx.fillStyle = PAL.stoneD;
+            ctx.fillRect(px+1, py+3, 14, 11);
+            ctx.fillStyle = PAL.stone;
+            ctx.fillRect(px+2, py+4, 12, 9);
+            ctx.fillStyle = "#1a1a1a";
+            ctx.fillRect(px+4, py+6, 8, 1);
+            ctx.fillRect(px+4, py+8, 6, 1);
+            ctx.fillRect(px+4, py+10, 7, 1);
+            break;
+          }
+          case "turing": { // blackboard
+            ctx.fillStyle = PAL.wood;
+            ctx.fillRect(px, py+1, 16, 14);
+            ctx.fillStyle = "#0a0a0a";
+            ctx.fillRect(px+1, py+2, 14, 12);
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(px+3, py+5, 1, 1);
+            ctx.fillRect(px+5, py+5, 4, 1);
+            ctx.fillRect(px+10, py+5, 2, 1);
+            ctx.fillRect(px+3, py+8, 8, 1);
+            ctx.fillRect(px+3, py+11, 5, 1);
+            // Reveal door if bonked 3 times
+            if(state.blackboardBonks >= 3){
+              ctx.fillStyle = PAL.gold;
+              ctx.fillRect(px+12, py+9, 2, 4);
+            }
+            break;
+          }
+          case "bombe": { // vacuum tube
+            ctx.fillStyle = "#5a5a5a";
+            ctx.fillRect(px+5, py+12, 6, 3);
+            ctx.fillStyle = "#1a1a1a";
+            ctx.fillRect(px+5, py+1, 6, 11);
+            const glow = (Math.sin(Date.now()/200)+1)/2;
+            ctx.fillStyle = `rgba(255,154,60,${0.4+0.5*glow})`;
+            ctx.fillRect(px+6, py+3, 4, 8);
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(px+7, py+5, 2, 2);
+            break;
+          }
+          case "shakey": { // wandering robot - drawn in npc loop instead
+            // We draw shakey as an npc that moves; static fallback here:
+            ctx.fillStyle = "#8a8a8a";
+            ctx.fillRect(px+4, py+3, 8, 9);
+            ctx.fillStyle = "#1a1a1a";
+            ctx.fillRect(px+6, py+5, 4, 2);
+            ctx.fillStyle = PAL.sky;
+            ctx.fillRect(px+6, py+8, 4, 2);
+            break;
+          }
+          case "cgc": { // bug on pedestal
+            ctx.fillStyle = PAL.stoneD;
+            ctx.fillRect(px+4, py+10, 8, 5);
+            ctx.fillStyle = "#1a1a1a";
+            ctx.fillRect(px+5, py+5, 6, 5);
+            ctx.fillStyle = PAL.red;
+            ctx.fillRect(px+6, py+6, 4, 3);
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(px+6, py+5, 1, 1);
+            ctx.fillRect(px+9, py+5, 1, 1);
+            break;
+          }
+          case "robotics": { // DRC door
+            ctx.fillStyle = "#2a1a08";
+            ctx.fillRect(px+1, py+1, 14, 15);
+            ctx.fillStyle = PAL.skyD;
+            ctx.fillRect(px+3, py+3, 10, 11);
+            ctx.fillStyle = "#fff";
+            ctx.font = "bold 6px monospace";
+            ctx.fillText("DRC", px+4, py+10);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // Hero portrait drawing.
+  // dir: down/up/left/right; frame: 0|1; tunic: green/blue/red/gold
+  function drawHero(c, cx, cy, scale, dir, frame, tunic){
+    const colors = {
+      green: { tunic: PAL.grass, trim: PAL.grassD },
+      blue:  { tunic: PAL.skyD,  trim: "#143a66"  },
+      red:   { tunic: PAL.red,   trim: "#6b1f10"  },
+      gold:  { tunic: PAL.gold,  trim: "#8a5a18"  }
+    }[tunic] || { tunic: PAL.grass, trim: PAL.grassD };
+
+    const px = (x,y,col) => { c.fillStyle = col; c.fillRect(cx + x*scale, cy + y*scale, scale, scale); };
+
+    // base 16x16 sprite, simple body
+    // Head (5..10, 1..5)
+    for(let y=1;y<5;y++) for(let x=5;x<11;x++) px(x,y,PAL.flesh);
+    // Hair
+    for(let x=5;x<11;x++) px(x,1,PAL.hair);
+    px(5,2,PAL.hair); px(10,2,PAL.hair);
+    // Eyes (face direction)
+    if(dir === "down"){
+      px(7,3,"#0b1020"); px(9,3,"#0b1020");
+    } else if(dir === "up"){
+      px(7,2,PAL.hair); px(9,2,PAL.hair);
+    } else if(dir === "left"){
+      px(6,3,"#0b1020");
+    } else if(dir === "right"){
+      px(9,3,"#0b1020");
+    }
+    // Tunic body (4..11, 6..12)
+    for(let y=6;y<12;y++) for(let x=4;x<12;x++) px(x,y,colors.tunic);
+    // Tunic trim
+    for(let x=4;x<12;x++) px(x,11,colors.trim);
+    // Belt
+    for(let x=4;x<12;x++) px(x,10,"#3a2418");
+    px(7,10,PAL.gold); px(8,10,PAL.gold); // buckle = mini shield
+    // Arms
+    px(3,7,colors.tunic); px(3,8,colors.tunic);
+    px(12,7,colors.tunic); px(12,8,colors.tunic);
+    // Stylus-sword (right hand) when facing down/right
+    if(dir === "down" || dir === "right"){
+      px(13,6,PAL.stone); px(13,7,PAL.gold); px(13,8,PAL.gold);
+    } else if(dir === "left"){
+      px(2,6,PAL.stone); px(2,7,PAL.gold); px(2,8,PAL.gold);
+    }
+    // Legs (5..10, 12..15) -- swap by frame for walk anim
+    const lx = frame === 0 ? 0 : 1;
+    for(let y=12;y<15;y++) for(let x=5;x<8;x++) px(x-lx, y, "#3a2418");
+    for(let y=12;y<15;y++) for(let x=8;x<11;x++) px(x+lx, y, "#3a2418");
+    // Boots
+    for(let x=5;x<8;x++) px(x-lx, 15, "#1a1a1a");
+    for(let x=8;x<11;x++) px(x+lx, 15, "#1a1a1a");
+  }
+
+  /* ------- ROOM LOAD / OBJECT INDEX --------------------------------------- */
+  function loadRoom(roomKey){
+    const def = ROOMS[roomKey];
+    if(!def) return null;
+    const room = {
+      id: roomKey,
+      def,
+      cols: def.cols,
+      rows: def.rows,
+      theme: def.theme,
+      tiles: def.map.map(r => r.split("")),
+      objects: [],
+      stageNum: ({s1:1,s2:2,s3:3,s4:4,s5:5,s6:6})[roomKey] || 0
+    };
+    // Map declared objects by char-position. Some chars repeat (e.g. "N" nodes,
+    // "s" signs); we walk through and assign in declaration order by char.
+    const queueByCh = {};
+    def.objects.forEach(o => {
+      (queueByCh[o.ch] = queueByCh[o.ch] || []).push({...o});
+    });
+    for(let y=0;y<room.rows;y++){
+      for(let x=0;x<room.cols;x++){
+        const ch = room.tiles[y][x];
+        if(queueByCh[ch] && queueByCh[ch].length){
+          const o = queueByCh[ch].shift();
+          o.x = x; o.y = y;
+          room.objects.push(o);
+        }
+      }
+    }
+    setCanvasSize(room.cols, room.rows);
+    state.currentRoom = room;
+
+    // Place hero at sensible spot
+    if(roomKey === "hub"){
+      state.hero = { x: 32, y: 80, dir: "down", frame: 0, moving: false };
+    } else {
+      // Enter near bottom door
+      const exit = room.objects.find(o => o.kind === "exit");
+      if(exit){ state.hero = { x: exit.x*TILE, y: exit.y*TILE - TILE, dir: "up", frame: 0, moving: false }; }
+      else   { state.hero = { x: TILE, y: TILE, dir: "down", frame: 0, moving: false }; }
+    }
+
+    // Shakey the Robot (Stage 2 NPC) — separate animated entity
+    if(roomKey === "s2"){
+      room.shakey = { x: 8*TILE, y: 6*TILE, dir: "right", lastStep: performance.now() };
+    }
+
+    return room;
+  }
+
+  function objAtTile(room, gx, gy){
+    return room.objects.find(o => o.x === gx && o.y === gy);
+  }
+  function tileAt(room, gx, gy){
+    if(gx<0 || gy<0 || gx>=room.cols || gy>=room.rows) return "#";
+    return room.tiles[gy][gx];
+  }
+  function isWalkable(room, gx, gy){
+    const t = tileAt(room, gx, gy);
+    if(t === "#") return false;
+    const o = objAtTile(room, gx, gy);
+    if(!o) return true;
+    // Most objects are interactable but blocking; portals are pass-through;
+    // exits walk-through; signs block (face them and press A).
+    if(o.kind === "portal" || o.kind === "exit") return true;
+    return false;
+  }
+
+  /* ------- INPUT ----------------------------------------------------------- */
+  const input = {
+    held: new Set(),
+    pressed: new Set()
+  };
+  window.addEventListener("keydown", (e) => {
+    // Konami code -- only on the title screen.
+    if(state.screen === "title"){
+      const expected = state.konami.codes[state.konami.progress];
+      if(expected && e.key.toLowerCase() === expected.toLowerCase()){
+        state.konami.progress++;
+        if(state.konami.progress >= state.konami.codes.length){
+          state.konami.progress = 0;
+          unlockKonami();
+        }
+      } else if(state.konami.progress > 0){
+        state.konami.progress = 0;
+      }
+    }
+
+    // CRITICAL: never intercept keys when the user is typing in a form field.
+    // This was the bug that ate "a", "s", "d", "w", and Space in the name input.
+    const ae = document.activeElement;
+    const isField = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+    if(isField) return;
+
+    // Esc closes the topmost open modal anywhere in the app.
+    if(e.key === "Escape"){
+      if(anyModalOpen()){
+        const open = ui.$$(".modal").filter(m => !m.hidden).pop();
+        if(open){
+          open.hidden = true;
+          if(open.id === "modal-pause") state.paused = false;
+        }
+        e.preventDefault();
+      }
+      return;
+    }
+
+    // Game-only key handling from here on.
+    if(state.screen !== "game") return;
+
+    // Movement keys: always preventDefault so the page doesn't scroll while
+    // the player walks. Enter and Space are NOT in this list -- they need to
+    // pass through to focused buttons in modals (so a kid can press Enter to
+    // close any "OK" dialog without clicking the mouse).
+    const movementKeys = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight",
+                          "w","a","s","d","W","A","S","D"];
+    if(movementKeys.includes(e.key)) e.preventDefault();
+
+    input.held.add(e.key);
+
+    // Enter / Space:
+    //  - With NO modal open: act as the world "interact" key.
+    //  - With a modal open: do nothing here -- the browser will activate the
+    //    focused button natively. This is what lets Enter/Space close OK.
+    if(e.key === "Enter" || e.key === " "){
+      if(!anyModalOpen()){
+        e.preventDefault();
+        tryInteract();
+      }
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    input.held.delete(e.key);
+  });
+  function anyModalOpen(){
+    return ui.$$(".modal").some(m => !m.hidden);
+  }
+
+  // On-screen D-pad
+  ui.$$(".dpad button[data-key]").forEach(btn => {
+    const k = btn.dataset.key;
+    const press = (down) => {
+      if(down) { input.held.add(k); if(k === "Enter") tryInteract(); }
+      else input.held.delete(k);
+    };
+    btn.addEventListener("touchstart", e => { e.preventDefault(); press(true); }, {passive:false});
+    btn.addEventListener("touchend",   e => { e.preventDefault(); press(false); }, {passive:false});
+    btn.addEventListener("mousedown",  e => press(true));
+    btn.addEventListener("mouseup",    e => press(false));
+    btn.addEventListener("mouseleave", e => press(false));
+  });
+
+  /* ------- MOVEMENT + GAME LOOP -------------------------------------------- */
+  let lastTs = performance.now();
+  function tick(ts){
+    const dt = Math.min(50, ts - lastTs);
+    lastTs = ts;
+
+    if(state.screen === "title"){
+      // Animate the title hero canvas
+      drawTitleHero();
+    }
+
+    if(state.screen === "game" && !anyModalOpen() && !state.paused){
+      stepHero(dt);
+      stepShakey(ts);
+      stepTimer(dt);
+      drawWorld();
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function stepTimer(dt){
+    if(!state.timerOn) return;
+    state.timerLeft = Math.max(0, state.timerLeft - dt);
+    if(state.timerLeft <= 0 && !state.timeUpShown){
+      state.timeUpShown = true;
+      ui.$("#tu-msg").textContent = STRINGS.timeUp(state.name);
+      ui.openModal("modal-timeup");
+    }
+    ui.setHud();
+  }
+
+  function stepHero(dt){
+    const room = state.currentRoom; if(!room) return;
+    const speed = 1.6 * (dt/16); // px/frame baseline
+    const h = state.hero;
+    let dx = 0, dy = 0;
+    if(input.held.has("ArrowUp")    || input.held.has("w") || input.held.has("W")) dy -= 1;
+    if(input.held.has("ArrowDown")  || input.held.has("s") || input.held.has("S")) dy += 1;
+    if(input.held.has("ArrowLeft")  || input.held.has("a") || input.held.has("A")) dx -= 1;
+    if(input.held.has("ArrowRight") || input.held.has("d") || input.held.has("D")) dx += 1;
+    // 4-direction (priority horizontal if both)
+    if(dx !== 0 && dy !== 0){ dy = 0; }
+    h.moving = (dx !== 0 || dy !== 0);
+    if(dx !== 0) h.dir = dx > 0 ? "right" : "left";
+    else if(dy !== 0) h.dir = dy > 0 ? "down" : "up";
+
+    if(h.moving){
+      const nx = h.x + dx * speed;
+      const ny = h.y + dy * speed;
+      // collision with tile grid using a small bbox
+      const bx = 4, by = 6, bw = 8, bh = 9; // hero collision box inside 16x16 sprite
+      const corners = (cx, cy) => [
+        [cx+bx, cy+by], [cx+bx+bw-1, cy+by],
+        [cx+bx, cy+by+bh-1], [cx+bx+bw-1, cy+by+bh-1]
+      ];
+      const canMoveX = corners(nx, h.y).every(([x,y]) => isWalkable(room, Math.floor(x/TILE), Math.floor(y/TILE)));
+      const canMoveY = corners(h.x, ny).every(([x,y]) => isWalkable(room, Math.floor(x/TILE), Math.floor(y/TILE)));
+
+      if(canMoveX) h.x = nx;
+      if(canMoveY) h.y = ny;
+
+      if(!canMoveX && dx !== 0){ bonk(); }
+      if(!canMoveY && dy !== 0){ bonk(); }
+
+      // animation frame
+      h.frame = Math.floor(performance.now()/120) % 2;
+      if(Math.floor(performance.now()/220) !== h._lastStepFrame){
+        h._lastStepFrame = Math.floor(performance.now()/220);
+        audio.step();
+      }
+
+      // auto-trigger portals/exits when hero centers on them
+      const hcx = Math.floor((h.x + bx + bw/2)/TILE);
+      const hcy = Math.floor((h.y + by + bh/2)/TILE);
+      const obj = objAtTile(room, hcx, hcy);
+      if(obj){
+        if(obj.kind === "portal"){ enterStage(obj.stage); }
+        else if(obj.kind === "exit"){ exitToHub(); }
+      }
+    } else {
+      h.frame = 0;
+    }
+  }
+
+  function stepShakey(ts){
+    const room = state.currentRoom;
+    if(!room || room.id !== "s2" || !room.shakey) return;
+    const s = room.shakey;
+    if(ts - s.lastStep > 1000){
+      s.lastStep = ts;
+      // wander 1 tile
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      const [dx,dy] = dirs[Math.floor(Math.random()*4)];
+      const ngx = Math.floor(s.x/TILE)+dx;
+      const ngy = Math.floor(s.y/TILE)+dy;
+      if(tileAt(room, ngx, ngy) === "."){
+        s.x = ngx*TILE; s.y = ngy*TILE;
+      }
+    }
+  }
+
+  function bonk(){
+    const stage = ui.$("#stage-area");
+    if(!state.reduced) stage.classList.add("bonk");
+    audio.bonk();
+    setTimeout(()=> stage.classList.remove("bonk"), 130);
+    // Special: blackboard counter
+    const room = state.currentRoom;
+    if(!room) return;
+    const h = state.hero;
+    const cx = Math.floor((h.x+8)/TILE);
+    const cy = Math.floor((h.y+10)/TILE);
+    const facing = facingTile(cx, cy, h.dir);
+    const obj = objAtTile(room, facing.x, facing.y);
+    if(obj && obj.id === "blackboard"){
+      state.blackboardBonks++;
+      if(state.blackboardBonks >= 3 && !state.eastereggsFound.has("turing")){
+        revealEgg("turing", {
+          title: "A hidden Turing/ELIZA door appears!",
+          text: '"DOCTOR: Hello. I am ELIZA. Tell me about the test you took."\n— a tiny chatbot conversation echoes through the door. (Reference: Turing 1950; Weizenbaum 1966.)'
+        });
+      }
+    }
+  }
+
+  function facingTile(gx, gy, dir){
+    if(dir === "up")    return { x: gx,   y: gy-1 };
+    if(dir === "down")  return { x: gx,   y: gy+1 };
+    if(dir === "left")  return { x: gx-1, y: gy   };
+    if(dir === "right") return { x: gx+1, y: gy   };
+    return { x: gx, y: gy };
+  }
+
+  function tryInteract(){
+    const room = state.currentRoom; if(!room) return;
+    const h = state.hero;
+    const bx = 4, by = 6, bw = 8, bh = 9;
+    const cx = Math.floor((h.x + bx + bw/2)/TILE);
+    const cy = Math.floor((h.y + by + bh/2)/TILE);
+    const facing = facingTile(cx, cy, h.dir);
+    let obj = objAtTile(room, facing.x, facing.y);
+    if(!obj) obj = objAtTile(room, cx, cy);
+    if(!obj){
+      // also check Shakey
+      if(room.shakey && Math.abs(room.shakey.x - h.x) < TILE && Math.abs(room.shakey.y - h.y) < TILE){
+        showDialog("Shakey the Robot",
+          "BEEP. Shakey, SRI 1966–1972, ARPA-funded. I'm a planning robot — I knew where I was, what to push, and how to get there.");
+        revealEgg("shakey");
+      }
+      return;
+    }
+    interact(obj);
+  }
+
+  function interact(obj){
+    switch(obj.kind){
+      case "puzzle": {
+        // Already cleared? Don't re-trigger teaching dialog or puzzle.
+        if(state.stagesCleared.has(obj.stage)){
+          showDialog("Already cleared",
+            "You've already finished this stage and claimed its artifact. Head back to the hub for another portal!");
+          break;
+        }
+        // Teach first, then run the puzzle on confirm.
+        const intro = STRINGS.stageIntros[obj.stage - 1];
+        showDialog(intro.title, intro.text, () => openPuzzle(obj.stage));
+        break;
+      }
+      case "codex": {
+        // Final assembly point. Locked until all 6 artifacts are gathered.
+        if(state.inventory.length < 7){
+          const got = state.inventory.length - 1; // minus the stylus-sword
+          showDialog("The Codex of Sparks",
+            `The pedestal sits dim. Six artifacts must rest upon it before it ignites.\n\nYou've gathered ${got} of 6 so far. Find the rest at the glowing portals (1–6) around the hub.`);
+        } else {
+          runFinalAssembly();
+        }
+        break;
+      }
+      case "exit":     exitToHub(); break;
+      case "portal":   enterStage(obj.stage); break;
+      case "scroll":   {
+        const list = STRINGS.heilmeier.map((q,i)=>`${i+1}. ${q}`).join("\n");
+        showDialog("Heilmeier's Catechism",
+          "Eight questions DARPA program managers ask of every proposal:\n\n"+list+
+          "\n\n— George H. Heilmeier (DARPA Director, 1975–1977).");
+        break;
+      }
+      case "node":     showDialog("ARPANET node", STRINGS.arpanet[obj.node] || "Hello, node."); break;
+      case "banner":   showDialog("DARPA office", `${obj.office} — ${STRINGS.offices[obj.office] || ""}`); break;
+      case "sign":     showDialog(obj.title || "A sign", obj.text || ""); break;
+      case "egg": {
+        if(obj.egg === "internet"){
+          showDialog(obj.title || "Stone tablet", obj.text || STRINGS.stoneTablet);
+          revealEgg("internet");
+        } else if(obj.egg === "bombe"){
+          openBombe();
+        } else if(obj.egg === "cgc"){
+          showDialog(obj.title || "Bug pedestal", obj.text || "");
+          revealEgg("cgc");
+        } else if(obj.egg === "robotics"){
+          showDialog(obj.title || "DRC", obj.text || "");
+          revealEgg("robotics");
+        } else if(obj.egg === "turing"){
+          if(state.blackboardBonks >= 3){
+            showDialog("Turing/ELIZA chamber",
+              '"DOCTOR: Hello. I am ELIZA. Tell me about your problem."\n\nA reference to Turing\'s 1950 question and Weizenbaum\'s 1966 chatbot.');
+            revealEgg("turing");
+          } else {
+            showDialog(obj.title || "Blackboard", "Bonk it from up close to see what's hiding here. (Walk into it.)");
+          }
+        } else if(obj.egg === "shakey"){
+          showDialog(obj.title || "Shakey", obj.text || "BEEP.");
+          revealEgg("shakey");
+        }
+        break;
+      }
+    }
+  }
+
+  function showDialog(title, text, onClose){
+    ui.$("#dialog-h").textContent = title;
+    // textContent preserves \n line breaks via white-space: pre-wrap
+    const body = ui.$("#dialog-body");
+    body.textContent = text || "";
+    body.style.whiteSpace = "pre-wrap";
+    ui.openModal("modal-dialog");
+    const okBtn = ui.$("#modal-dialog [data-close]");
+    // Explicitly focus so Enter / Space activate the OK button without a click.
+    setTimeout(() => okBtn.focus(), 60);
+    // Idempotent: a double-click or a stray Enter cannot double-fire the
+    // callback (which previously could push an artifact twice or skip a step).
+    let handled = false;
+    okBtn.onclick = () => {
+      if(handled) return;
+      handled = true;
+      ui.closeModal("modal-dialog");
+      if(typeof onClose === "function") onClose();
+    };
+  }
+
+  /* ------- WORLD DRAW ------------------------------------------------------ */
+  function drawWorld(){
+    const room = state.currentRoom; if(!room) return;
+    // Tiles
+    for(let y=0;y<room.rows;y++){
+      for(let x=0;x<room.cols;x++){
+        drawTile(room, x, y, room.tiles[y][x]);
+      }
+    }
+    // Objects
+    room.objects.forEach(o => drawObject(room, o));
+    // Shakey
+    if(room.shakey){
+      const px = room.shakey.x, py = room.shakey.y;
+      ctx.fillStyle = "#8a8a8a";
+      ctx.fillRect(px+4, py+4, 8, 8);
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(px+6, py+5, 4, 2);
+      ctx.fillStyle = PAL.sky;
+      ctx.fillRect(px+6, py+9, 4, 2);
+      ctx.fillStyle = "#3a3a3a";
+      ctx.fillRect(px+5, py+12, 6, 2);
+    }
+    // Hero
+    drawHero(ctx, state.hero.x, state.hero.y, 1, state.hero.dir, state.hero.frame, state.tunic);
+  }
+
+  function drawTitleHero(){
+    const c = ui.$("#title-hero");
+    if(!c) return;
+    const cc = c.getContext("2d");
+    cc.imageSmoothingEnabled = false;
+    cc.clearRect(0,0,c.width,c.height);
+    cc.fillStyle = "#1a2348";
+    cc.fillRect(0,0,c.width,c.height);
+    const dir = (Math.floor(performance.now()/600) % 2) === 0 ? "down" : "right";
+    const frame = Math.floor(performance.now()/200) % 2;
+    const scale = 3;
+    const ox = (c.width  - 16*scale)/2;
+    const oy = (c.height - 16*scale)/2;
+    drawHero(cc, ox, oy, scale, dir, frame, state.tunic);
+  }
+
+  /* ------- STAGE TRANSITIONS / SPLASH -------------------------------------- */
+  function enterStage(num){
+    if(num<1 || num>6) return;
+    if(state.stagesCleared.has(num)){
+      // already cleared — let them revisit briefly
+    }
+    showSplash(STRINGS.splashes[num-1], STRINGS.stageEras[num-1]);
+    setTimeout(()=>{
+      loadRoom("s"+num);
+      audio.stage();
+      ui.setHud();
+    }, 1200);
+  }
+  function exitToHub(){
+    showSplash("ARPANET Hub", "Pick your next quest");
+    setTimeout(()=>{
+      loadRoom("hub");
+      ui.setHud();
+    }, 700);
+  }
+
+  function showSplash(title, sub){
+    const stage = ui.$("#stage-area");
+    const splash = document.createElement("div");
+    splash.className = "stage-splash";
+    splash.innerHTML = `<div><div style="font-size:14px;">${title}</div>
+      <div class="small dim" style="margin-top:6px;font-family:var(--ui-body)">${sub||""}</div>
+      <div class="tiny dim" style="margin-top:6px;font-family:var(--ui-body)">tap or press Enter</div></div>`;
+    stage.appendChild(splash);
+    const dismiss = () => splash.remove();
+    splash.addEventListener("click", dismiss);
+    splash.addEventListener("touchend", dismiss);
+    setTimeout(dismiss, 2000);
+  }
+
+  /* ------- PUZZLE FLOW ----------------------------------------------------- */
+  let activePuzzle = null;
+  let puzzleHintLevel = 0;
+  let puzzleSkipTimer = null;
+
+  function openPuzzle(stage){
+    if(state.stagesCleared.has(stage)){
+      showDialog("Already cleared", "You already finished this stage. Find another portal!");
+      return;
+    }
+    const tier = state.tier || "cadet";
+    const def = puzzles[stage][tier]();
+    activePuzzle = { stage, def, startTs: Date.now() };
+    puzzleHintLevel = state.coop ? 1 : 0;
+
+    ui.$("#pz-h").textContent = `Stage ${stage}: ${STRINGS.stageNames[stage-1]}`;
+    ui.$("#pz-prompt").textContent = def.prompt;
+    ui.$("#pz-feedback").textContent = "";
+    ui.$("#pz-feedback").className = "pz-feedback";
+    ui.$("#pz-skip").hidden = true;
+    ui.$("#pz-submit").hidden = true;
+    renderPuzzleBody(def);
+
+    // Show coop hint immediately (non-spoiler) if on
+    if(state.coop && def.hints && def.hints[0]){
+      ui.feedback(ui.$("#pz-feedback"), "💡 " + def.hints[0], true);
+    }
+    // Skip button after 30s
+    clearTimeout(puzzleSkipTimer);
+    puzzleSkipTimer = setTimeout(() => { ui.$("#pz-skip").hidden = false; }, 30000);
+
+    ui.openModal("modal-puzzle");
+  }
+
+  function renderPuzzleBody(def){
+    const body = ui.$("#pz-body");
+    body.innerHTML = "";
+
+    if(def.kind === "pair"){
+      // Two-column matching
+      const left = def.pairs.map(p=>p[0]);
+      const right = def.pairs.map(p=>p[1]).slice().sort(()=>Math.random()-0.5);
+      let pickedLeft = null;
+      const matched = new Set();
+      const grid = document.createElement("div"); grid.className = "pair-grid";
+      const lcol = document.createElement("div"); const rcol = document.createElement("div");
+      const lh = document.createElement("div"); lh.className="col-head"; lh.textContent="Pick one →";
+      const rh = document.createElement("div"); rh.className="col-head"; rh.textContent="...then its match";
+      grid.appendChild(lh); grid.appendChild(rh);
+      left.forEach(s => {
+        const b = document.createElement("button"); b.className="pair-card"; b.textContent=s;
+        b.setAttribute("aria-pressed","false");
+        b.onclick = () => {
+          if(matched.has(s)) return;
+          ui.$$(".pair-card", lcol).forEach(x=> x.setAttribute("aria-pressed","false"));
+          b.setAttribute("aria-pressed","true");
+          pickedLeft = { s, btn: b };
+        };
+        lcol.appendChild(b);
+      });
+      right.forEach(s => {
+        const b = document.createElement("button"); b.className="pair-card"; b.textContent=s;
+        b.onclick = () => {
+          if(!pickedLeft) return;
+          const correct = def.pairs.find(p => p[0] === pickedLeft.s && p[1] === s);
+          if(correct){
+            matched.add(pickedLeft.s);
+            pickedLeft.btn.classList.add("matched"); pickedLeft.btn.disabled = true;
+            b.classList.add("matched"); b.disabled = true;
+            audio.ok();
+            pickedLeft = null;
+            if(matched.size === def.pairs.length){ puzzleSolved(); }
+          } else {
+            wrongAnswer();
+            pickedLeft.btn.setAttribute("aria-pressed","false");
+            pickedLeft = null;
+          }
+        };
+        rcol.appendChild(b);
+      });
+      grid.appendChild(lcol); grid.appendChild(rcol);
+      body.appendChild(grid);
+    }
+
+    else if(def.kind === "scramble" || def.kind === "fill" || def.kind === "cipher"){
+      const inp = document.createElement("input");
+      inp.className = "scramble-input";
+      inp.maxLength = 20;
+      inp.autocomplete = "off";
+      inp.placeholder = "type your answer";
+      inp.addEventListener("keydown", e => {
+        if(e.key === "Enter"){ ui.$("#pz-submit").click(); }
+      });
+      body.appendChild(inp);
+      ui.$("#pz-submit").hidden = false;
+      ui.$("#pz-submit").onclick = () => {
+        const v = (inp.value || "").trim().toUpperCase();
+        if(v === def.answer.toUpperCase()){ puzzleSolved(); }
+        else wrongAnswer();
+      };
+      setTimeout(()=> inp.focus(), 50);
+    }
+
+    else if(def.kind === "sequence"){
+      // Simon-says: flash a sequence, then user replays
+      const colors = ["A","B","C","D"];
+      const length = def.length || 4;
+      const seq = [];
+      for(let i=0;i<length;i++) seq.push(colors[Math.floor(Math.random()*colors.length)]);
+
+      const wrap = document.createElement("div"); wrap.className = "seq-buttons";
+      const btns = {};
+      colors.forEach(c => {
+        const b = document.createElement("button"); b.className="seq-btn"; b.dataset.color=c; b.textContent=c;
+        b.disabled = true;
+        wrap.appendChild(b); btns[c] = b;
+      });
+      const status = document.createElement("p"); status.className="small dim"; status.textContent="Watch carefully...";
+      body.appendChild(status); body.appendChild(wrap);
+
+      const replayHint = document.createElement("button"); replayHint.className="btn"; replayHint.style.marginTop="8px";
+      replayHint.textContent = "🔁 Show again";
+      replayHint.onclick = () => playSeq();
+      body.appendChild(replayHint);
+
+      let userIdx = 0;
+      function playSeq(){
+        userIdx = 0; status.textContent = "Watch carefully...";
+        Object.values(btns).forEach(b => b.disabled = true);
+        seq.forEach((c, i) => {
+          setTimeout(()=>{
+            btns[c].classList.add("flash");
+            audio.step();
+            setTimeout(()=> btns[c].classList.remove("flash"), 400);
+          }, 600 + i*700);
+        });
+        setTimeout(()=>{
+          status.textContent = "Now you — press them in the same order.";
+          Object.values(btns).forEach(b => b.disabled = false);
+        }, 600 + seq.length*700 + 200);
+      }
+      Object.values(btns).forEach(b => {
+        b.onclick = () => {
+          const c = b.dataset.color;
+          if(c === seq[userIdx]){
+            audio.ok();
+            userIdx++;
+            if(userIdx >= seq.length){ puzzleSolved(); }
+          } else {
+            wrongAnswer();
+            userIdx = 0;
+          }
+        };
+      });
+      playSeq();
+    }
+
+    else if(def.kind === "logic"){
+      const wrap = document.createElement("div"); wrap.className="logic-grid";
+      const lab = document.createElement("div"); lab.textContent = "Diagnosis:";
+      const sel = document.createElement("select");
+      def.options.forEach(o => {
+        const op = document.createElement("option"); op.value=o; op.textContent=o; sel.appendChild(op);
+      });
+      wrap.appendChild(lab); wrap.appendChild(sel);
+      body.appendChild(wrap);
+      ui.$("#pz-submit").hidden = false;
+      ui.$("#pz-submit").onclick = () => {
+        if(sel.value === def.answer){ puzzleSolved(); } else wrongAnswer();
+      };
+    }
+
+    else if(def.kind === "image"){
+      const grid = document.createElement("div"); grid.className="image-grid";
+      const picked = new Set();
+      def.items.forEach((item, idx) => {
+        const t = document.createElement("button"); t.className="image-tile"; t.textContent = item.glyph;
+        t.setAttribute("aria-pressed","false");
+        t.setAttribute("aria-label", item.label);
+        t.onclick = () => {
+          const isOn = t.getAttribute("aria-pressed") === "true";
+          t.setAttribute("aria-pressed", isOn ? "false" : "true");
+          if(isOn) picked.delete(idx); else picked.add(idx);
+        };
+        grid.appendChild(t);
+      });
+      body.appendChild(grid);
+      ui.$("#pz-submit").hidden = false;
+      ui.$("#pz-submit").onclick = () => {
+        const correctIdx = new Set(def.items.map((it,i)=> it.correct ? i : null).filter(x=>x!==null));
+        const ok = picked.size === correctIdx.size && [...picked].every(i => correctIdx.has(i));
+        if(ok) puzzleSolved(); else wrongAnswer();
+      };
+    }
+
+    else if(def.kind === "maze"){
+      const N = def.size;
+      const wrap = document.createElement("div"); wrap.className="maze-grid";
+      wrap.style.gridTemplateColumns = `repeat(${N}, auto)`;
+      let pos = [...def.start];
+      const cells = [];
+      function render(){
+        wrap.innerHTML = "";
+        for(let y=0;y<N;y++){
+          for(let x=0;x<N;x++){
+            const c = document.createElement("div"); c.className="maze-cell";
+            if(def.grid[y][x] === 1) c.classList.add("wall");
+            if(x===def.start[0] && y===def.start[1]) c.classList.add("start");
+            if(x===def.end[0]   && y===def.end[1])   c.classList.add("end");
+            if(x===pos[0] && y===pos[1]){ c.classList.add("you"); c.textContent = "🚗"; }
+            wrap.appendChild(c);
+          }
+        }
+      }
+      render();
+      const btns = document.createElement("div"); btns.className="row"; btns.style.marginTop="8px";
+      [["▲",[0,-1]],["▼",[0,1]],["◀",[-1,0]],["▶",[1,0]]].forEach(([lbl,[dx,dy]]) => {
+        const b = document.createElement("button"); b.className="btn"; b.textContent=lbl;
+        b.onclick = () => move(dx,dy);
+        btns.appendChild(b);
+      });
+      body.appendChild(wrap); body.appendChild(btns);
+      // keyboard within modal
+      function move(dx,dy){
+        const nx = pos[0]+dx, ny = pos[1]+dy;
+        if(nx<0||ny<0||nx>=N||ny>=N) return;
+        if(def.grid[ny][nx] === 1){ audio.bonk(); return; }
+        pos = [nx, ny]; audio.step(); render();
+        if(nx===def.end[0] && ny===def.end[1]) puzzleSolved();
+      }
+      const onKey = (e) => {
+        if(ui.$("#modal-puzzle").hidden) { window.removeEventListener("keydown", onKey); return; }
+        if(e.key === "ArrowUp")    { e.preventDefault(); move(0,-1); }
+        if(e.key === "ArrowDown")  { e.preventDefault(); move(0,1); }
+        if(e.key === "ArrowLeft")  { e.preventDefault(); move(-1,0); }
+        if(e.key === "ArrowRight") { e.preventDefault(); move(1,0); }
+      };
+      window.addEventListener("keydown", onKey);
+    }
+
+    else if(def.kind === "pattern"){
+      // Render the explicit sequence (was previously parsed out of the prompt
+      // string, which broke for emoji and multi-token patterns -- the kid-easy
+      // stage 6 was showing "What comes next" as cells). Use def.sequence.
+      const row = document.createElement("div"); row.className="pattern-row";
+      const seq = Array.isArray(def.sequence) ? def.sequence : [];
+      seq.forEach(p => {
+        const c = document.createElement("span"); c.className="pattern-cell"; c.textContent = p; row.appendChild(c);
+      });
+      const q = document.createElement("span"); q.className="pattern-cell q"; q.textContent="?";
+      row.appendChild(q);
+      body.appendChild(row);
+
+      const opts = document.createElement("div"); opts.className="pattern-options";
+      def.options.forEach(o => {
+        const b = document.createElement("button"); b.className="btn btn--big"; b.textContent=o;
+        b.style.fontSize = "22px";
+        b.onclick = () => {
+          if(o === def.answer){ puzzleSolved(); } else wrongAnswer();
+        };
+        opts.appendChild(b);
+      });
+      body.appendChild(opts);
+    }
+  }
+
+  function wrongAnswer(){
+    state.attempts[activePuzzle.stage] = (state.attempts[activePuzzle.stage]||0) + 1;
+    audio.no();
+    ui.feedback(ui.$("#pz-feedback"), ui.rand(STRINGS.encouragements), false);
+  }
+
+  function puzzleSolved(){
+    if(!activePuzzle) return;
+    const stage = activePuzzle.stage;
+    const wasHinted = puzzleHintLevel > 0 || state.coop;
+    const baseScore = 10;
+    const bonus = wasHinted ? 0 : 5;
+    state.score += baseScore + bonus;
+    if(!wasHinted) state.badges.add("clean-stage-"+stage);
+    state.stagesCleared.add(stage);
+    state.badges.add("stage-"+stage);
+    audio.ok();
+    ui.feedback(ui.$("#pz-feedback"), ui.rand(STRINGS.correct), true);
+
+    // Reinforcement after puzzle, then item-get. Clean callback chain.
+    setTimeout(() => {
+      ui.closeModal("modal-puzzle");
+      showDialog(
+        `${STRINGS.stageNames[stage-1]} — what we learned`,
+        STRINGS.stageEdu[stage-1],
+        () => {
+          const itemKey = ["tape","scroll","compass","shard","key","crystal"][stage-1];
+          if(itemKey){
+            state.inventory.push(itemKey);
+            showItemGet(itemKey);
+          }
+        }
+      );
+      ui.setHud();
+    }, 800);
+  }
+
+  function showItemGet(itemKey){
+    const it = STRINGS.items[itemKey];
+    if(!it) return;
+    ui.$("#ig-glyph").textContent = it.glyph;
+    ui.$("#ig-h").textContent = `You got the ${it.name}!`;
+    ui.$("#ig-desc").textContent = it.desc;
+    ui.openModal("modal-itemget");
+    audio.itemGet();
+    ui.setHud();
+    // After picking up an artifact, head back to the hub. If all 6 have been
+    // collected, point the player at the Codex pedestal for final assembly.
+    const okBtn = ui.$("#modal-itemget [data-close]");
+    setTimeout(() => okBtn.focus(), 60);
+    let handled = false;
+    okBtn.onclick = () => {
+      if(handled) return;
+      handled = true;
+      ui.closeModal("modal-itemget");
+      // Robust check: BOTH stagesCleared count AND inventory must be complete
+      // before we promote the player to "all done". This guards against any
+      // future race where one updates without the other.
+      const allDone = state.stagesCleared.size >= 6 && state.inventory.length >= 7;
+      exitToHub();
+      if(allDone){
+        setTimeout(() => {
+          showDialog(
+            "All six artifacts gathered!",
+            "Walk to the glowing Codex pedestal in the middle of the hub. Then press Space (or Enter, or the A button) to ignite the Codex."
+          );
+        }, 950);
+      }
+    };
+  }
+
+  /* ------- FINAL ASSEMBLY (Codex ignition) ---------------------------------
+     The big payoff. Six artifacts pop into place on the pedestal one at a
+     time with a chiptune arpeggio, then a triumphant chord plays, sparkles
+     burst around the pedestal, and the closing message reveals with the
+     player's name. The "View Certificate" button is hidden during the
+     animation, then revealed and focused so Enter / Space activate it.
+  -------------------------------------------------------------------------- */
+  function runFinalAssembly(){
+    ui.openModal("modal-codex");
+    audio.fanfare();
+    const items = ["tape","scroll","compass","shard","key","crystal"];
+    const labels = items.map(k => STRINGS.items[k].name);
+    const glyphsEl = ui.$("#codex-glyphs");
+    const textEl   = ui.$("#codex-text");
+    const goBtn    = ui.$("#codex-go");
+
+    // Reset display
+    glyphsEl.innerHTML = items.map(_ =>
+      '<span class="codex-slot">·</span>'
+    ).join(" ");
+    textEl.textContent = "";
+    goBtn.disabled = true;
+    goBtn.style.opacity = "0.3";
+
+    const slots = glyphsEl.querySelectorAll(".codex-slot");
+    let i = 0;
+    const reveal = () => {
+      if(i >= items.length){
+        // ALL SIX revealed -- triumphant chord, sparkles, finale text, focus button.
+        audio.bigChord();
+        spawnSparkles(glyphsEl, 18);
+        const name = (state.name || "Friend").toString();
+        textEl.textContent =
+          STRINGS.codexFinale +
+          "\n\nYou did it, Explorer " + name + "!";
+        goBtn.disabled = false;
+        goBtn.style.opacity = "1";
+        // Focus the button so Enter / Space activate the next step.
+        setTimeout(() => goBtn.focus(), 200);
+        return;
+      }
+      const span = slots[i];
+      span.textContent = STRINGS.items[items[i]].glyph;
+      span.classList.add("codex-pop");
+      // Live-announce the item name for screen readers and curious adults.
+      span.setAttribute("aria-label", labels[i]);
+      audio.eggGet();
+      i++;
+      setTimeout(reveal, 520);
+    };
+    setTimeout(reveal, 600);
+
+    let goHandled = false;
+    goBtn.onclick = () => {
+      if(goHandled) return;
+      goHandled = true;
+      ui.closeModal("modal-codex");
+      finishGame();
+    };
+  }
+
+  /* Sparkle burst -- pure DOM, no images. Used by runFinalAssembly. */
+  function spawnSparkles(parent, count){
+    if(state.reduced) return; // honor reduced motion
+    parent.style.position = "relative";
+    const glyphs = ["✨","⭐","🌟","💫"];
+    for(let i=0; i<count; i++){
+      const s = document.createElement("span");
+      s.className = "sparkle";
+      s.textContent = glyphs[Math.floor(Math.random()*glyphs.length)];
+      s.style.left = (8 + Math.random()*84) + "%";
+      s.style.top  = (10 + Math.random()*70) + "%";
+      s.style.animationDelay = (Math.random()*500) + "ms";
+      parent.appendChild(s);
+      setTimeout(() => s.remove(), 1900);
+    }
+  }
+
+  /* ------- HINTS / SKIP ---------------------------------------------------- */
+  ui.$("#pz-hint").addEventListener("click", () => {
+    if(!activePuzzle) return;
+    const def = activePuzzle.def;
+    if(!def.hints) return;
+    state.hintsUsedFor.add(activePuzzle.stage);
+    puzzleHintLevel = Math.min((def.hints.length || 1) - 1, puzzleHintLevel + 1);
+    ui.feedback(ui.$("#pz-feedback"), "💡 " + def.hints[puzzleHintLevel], true);
+  });
+  ui.$("#pz-skip").addEventListener("click", () => {
+    if(!activePuzzle) return;
+    const stage = activePuzzle.stage;
+    // Skipping still clears the stage and awards the item -- educational content
+    // is never gated behind a correct answer.
+    state.stagesCleared.add(stage);
+    state.badges.add("stage-"+stage);
+    ui.closeModal("modal-puzzle");
+    showDialog(
+      `${STRINGS.stageNames[stage-1]} — what we learned`,
+      STRINGS.stageEdu[stage-1],
+      () => {
+        const itemKey = ["tape","scroll","compass","shard","key","crystal"][stage-1];
+        if(itemKey){ state.inventory.push(itemKey); showItemGet(itemKey); }
+      }
+    );
+  });
+  ui.$("#pz-close").addEventListener("click", () => ui.closeModal("modal-puzzle"));
+
+  /* ------- BOMBE ROTOR PUZZLE (Easter egg #3) ------------------------------ */
+  function openBombe(){
+    if(state.eastereggsFound.has("bombe")){
+      showDialog("Bombe rotors", "Already solved — nicely done, Codebreaker.");
+      return;
+    }
+    ui.$("#pz-h").textContent = "Bletchley Bombe rotor (hidden)";
+    ui.$("#pz-prompt").textContent = "Set 3 rotors so they multiply to 60. Tap a rotor to cycle 1→6.";
+    ui.$("#pz-feedback").textContent = "";
+    ui.$("#pz-feedback").className = "pz-feedback";
+    ui.$("#pz-skip").hidden = true;
+    ui.$("#pz-submit").hidden = false;
+
+    const body = ui.$("#pz-body"); body.innerHTML = "";
+    const rotors = [1,1,1];
+    const row = document.createElement("div"); row.className="pattern-row";
+    const cells = rotors.map((v,i) => {
+      const c = document.createElement("button"); c.className="pattern-cell q"; c.textContent = v;
+      c.onclick = () => { rotors[i] = (rotors[i] % 6) + 1; c.textContent = rotors[i]; };
+      row.appendChild(c); return c;
+    });
+    body.appendChild(row);
+
+    activePuzzle = { stage: 0, def: { hints:[
+      "Try small numbers that multiply to 60.",
+      "3 × 4 × 5 = 60.",
+      "Set rotors to 3, 4, 5."
+    ]}, startTs: Date.now() };
+    puzzleHintLevel = 0;
+
+    ui.$("#pz-submit").onclick = () => {
+      const product = rotors.reduce((a,b)=>a*b, 1);
+      if(product === 60){
+        state.score += 50;
+        revealEgg("bombe", { silent: true });
+        ui.feedback(ui.$("#pz-feedback"), "+50! Codebreaker badge unlocked.", true);
+        audio.ok();
+        setTimeout(()=> ui.closeModal("modal-puzzle"), 800);
+      } else {
+        ui.feedback(ui.$("#pz-feedback"), `Product = ${product}. Aim for 60.`, false);
+        audio.no();
+      }
+    };
+    ui.openModal("modal-puzzle");
+  }
+
+  /* ------- EASTER EGGS ----------------------------------------------------- */
+  function revealEgg(name, opts={}){
+    if(state.eastereggsFound.has(name)) return;
+    state.eastereggsFound.add(name);
+    state.score += 5;
+    audio.eggGet();
+    if(name === "bombe") state.badges.add("codebreaker");
+    if(name === "konami") state.badges.add("heilmeier-apprentice");
+    ui.setHud();
+    if(!opts.silent && opts.title){
+      // Allow the caller to provide a follow-up dialog
+      showDialog(opts.title, opts.text || "");
+    }
+  }
+  function unlockKonami(){
+    if(state.eastereggsFound.has("konami")) return;
+    revealEgg("konami");
+    // Reveal gold tunic swatch
+    ui.$("#swatch-gold").hidden = false;
+    ui.$("#gold-hint").hidden = false;
+    audio.itemGet();
+    flashTitle("DARPA HARD unlocked!");
+  }
+  function flashTitle(msg){
+    const el = document.createElement("div");
+    el.className = "panel center";
+    el.style.position = "fixed"; el.style.top = "20px";
+    el.style.left = "50%"; el.style.transform = "translateX(-50%)";
+    el.style.zIndex = "1000"; el.style.padding = "8px 14px";
+    el.style.background = "var(--accent)"; el.style.color="#1a1a1a";
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 1800);
+  }
+
+  /* ------- FINAL ----------------------------------------------------------- */
+  function finishGame(){
+    ui.show("final");
+    ui.$("#cert-name").textContent = (state.name || "Explorer").toUpperCase();
+    ui.$("#cert-score").textContent = state.score;
+    ui.$("#cert-badges").textContent = [...state.stagesCleared].length;
+    ui.$("#cert-eggs").textContent = state.eastereggsFound.size;
+    const grid = ui.$("#cert-badge-grid"); grid.innerHTML = "";
+    for(let i=1;i<=6;i++){
+      const earned = state.stagesCleared.has(i);
+      const div = document.createElement("div"); div.className = "badge"+(earned?"":" dim");
+      const item = ["tape","scroll","compass","shard","key","crystal"][i-1];
+      div.innerHTML = `<span class="glyph">${earned ? STRINGS.items[item].glyph : "·"}</span>
+                       <strong>Stage ${i}</strong><br>${STRINGS.stageNames[i-1]}`;
+      grid.appendChild(div);
+    }
+    // Celebration: glow the certificate, replay the fanfare, focus Play Again
+    // so a kid (or the next kid in line) can press Enter to start over.
+    const cert = document.querySelector("#screen-final .cert");
+    if(cert) cert.classList.add("cert-celebrate");
+    audio.fanfare();
+    setTimeout(() => audio.bigChord(), 700);
+    setTimeout(() => {
+      const again = ui.$("#final-again");
+      if(again) again.focus();
+    }, 200);
+  }
+
+  /* ------- WIRE UI EVENTS -------------------------------------------------- */
+  function wire(){
+    // Title
+    ui.$("#btn-start").onclick = () => ui.show("tier");
+    ui.$("#btn-help-title").onclick = () => ui.openModal("modal-help");
+    ui.$("#btn-settings").onclick = () => ui.openModal("modal-settings");
+    ui.$("#btn-refs").onclick = () => { renderRefs(); ui.openModal("modal-refs"); };
+
+    // Tier
+    ui.$$('.tier-card').forEach(card => {
+      card.onclick = () => {
+        ui.$$('.tier-card').forEach(c => c.setAttribute("aria-pressed","false"));
+        card.setAttribute("aria-pressed","true");
+        state.tier = card.dataset.tier;
+        ui.$("#tier-next").disabled = false;
+      };
+    });
+    ui.$("#opt-coop").onchange = e => state.coop = e.target.checked;
+    ui.$("#tier-back").onclick = () => ui.show("title");
+    ui.$("#tier-next").onclick = () => {
+      if(!state.tier) return;
+      ui.show("hero");
+      drawHeroPreview();
+    };
+
+    // Hero
+    ui.$$('.swatch').forEach(sw => {
+      sw.onclick = () => {
+        if(sw.hidden) return;
+        ui.$$('.swatch').forEach(s => s.setAttribute("aria-pressed","false"));
+        sw.setAttribute("aria-pressed","true");
+        state.tunic = sw.dataset.tunic;
+        drawHeroPreview();
+      };
+    });
+    ui.$("#hero-name").addEventListener("input", e => {
+      state.name = (e.target.value || "").slice(0,12);
+    });
+    ui.$("#hero-back").onclick = () => ui.show("tier");
+    ui.$("#hero-next").onclick = () => {
+      state.name = (ui.$("#hero-name").value || "").trim().slice(0,12) || "";
+      flashTitle(STRINGS.welcome(state.name || "Explorer"));
+      ui.show("timer");
+    };
+
+    // Timer
+    ui.$("#opt-timer").onchange = e => state.timerOn = e.target.checked;
+    ui.$("#timer-back").onclick = () => ui.show("hero");
+    ui.$("#timer-go").onclick = () => startGame();
+
+    // Game
+    ui.$("#btn-pause").onclick = () => { state.paused = true; ui.openModal("modal-pause"); };
+    ui.$("#btn-map").onclick = () => { renderMap(); ui.openModal("modal-map"); };
+    ui.$("#btn-help").onclick = () => ui.openModal("modal-help");
+    ui.$("#btn-game-refs").onclick = () => { renderRefs(); ui.openModal("modal-refs"); };
+    ui.$("#btn-quit").onclick = () => quitToTitle();
+    ui.$("#btn-mute").onclick = () => {
+      state.mute = !state.mute;
+      ui.$("#set-sound").checked = !state.mute;
+      ui.setHud();
+    };
+    ui.$("#pause-refs").onclick = () => { renderRefs(); ui.openModal("modal-refs"); };
+    ui.$("#pause-quit").onclick = () => { ui.closeModal("modal-pause"); quitToTitle(); };
+
+    // Modals: data-close
+    ui.$$("[data-close]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-close");
+        ui.closeModal(id);
+        if(id === "modal-pause") state.paused = false;
+      });
+    });
+    // Click outside modal-card closes
+    ui.$$(".modal").forEach(m => {
+      m.addEventListener("click", e => {
+        if(e.target === m){ m.hidden = true; if(m.id === "modal-pause") state.paused = false; }
+      });
+    });
+
+    // Settings
+    ui.$("#set-sound").onchange = e => { state.mute = !e.target.checked; ui.setHud(); };
+    ui.$("#set-scan").onchange = e => {
+      state.crt = e.target.checked;
+      ui.$("#stage-area").classList.toggle("crt", state.crt);
+    };
+    ui.$("#set-reduced").onchange = e => { state.reduced = e.target.checked; };
+
+    // Final
+    ui.$("#final-again").onclick = () => { resetRun(); startGame(); };
+    ui.$("#final-tier").onclick = () => { resetRun(); ui.show("tier"); };
+    ui.$("#final-refs").onclick = () => { renderRefs(); ui.openModal("modal-refs"); };
+
+    // Time-up
+    ui.$("#tu-untimed").onclick = () => { state.timerOn = false; state.timeUpShown = false; ui.closeModal("modal-timeup"); ui.setHud(); };
+    ui.$("#tu-end").onclick = () => { ui.closeModal("modal-timeup"); finishGame(); };
+
+    // Initial settings reflect state
+    ui.$("#set-sound").checked = !state.mute;
+    ui.$("#set-scan").checked = state.crt;
+    ui.$("#set-reduced").checked = !!window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    state.reduced = ui.$("#set-reduced").checked;
+
+    // Debug stage-jump
+    if(DEBUG){
+      const sel = ui.$("#debug-jump"); sel.hidden = false;
+      sel.innerHTML = `<option value="">jump…</option>` +
+        ["hub","s1","s2","s3","s4","s5","s6"].map(k => `<option value="${k}">${k}</option>`).join("");
+      sel.onchange = () => {
+        if(sel.value === "hub") loadRoom("hub");
+        else if(sel.value){ loadRoom(sel.value); }
+        ui.setHud();
+      };
+    }
+
+    // Detect mobile to default scanlines off (already off; honor reduced motion)
+  }
+
+  /* ------- Hero preview (hero screen) ------------------------------------- */
+  function drawHeroPreview(){
+    const c = ui.$("#hero-preview");
+    if(!c) return;
+    const cc = c.getContext("2d");
+    cc.imageSmoothingEnabled = false;
+    cc.clearRect(0,0,c.width,c.height);
+    cc.fillStyle = "#1a2348";
+    cc.fillRect(0,0,c.width,c.height);
+    const scale = 3;
+    const ox = (c.width - 16*scale)/2, oy = (c.height - 16*scale)/2;
+    drawHero(cc, ox, oy, scale, "down", 0, state.tunic);
+  }
+
+  /* ------- Map modal ------------------------------------------------------- */
+  function renderMap(){
+    const body = ui.$("#map-body");
+    body.innerHTML = "";
+    const ul = document.createElement("ul");
+    for(let i=1;i<=6;i++){
+      const li = document.createElement("li");
+      const cleared = state.stagesCleared.has(i) ? "✓" : "·";
+      li.innerHTML = `<strong>${cleared}</strong> Stage ${i}: ${STRINGS.stageNames[i-1]} <span class="dim small">(${STRINGS.stageEras[i-1]})</span>`;
+      ul.appendChild(li);
+    }
+    body.appendChild(ul);
+    const note = document.createElement("p");
+    note.className = "small dim";
+    note.textContent = "ARPANET nodes (UCLA, SRI, UCSB, Utah) glow at the corners of the hub.";
+    body.appendChild(note);
+  }
+
+  /* ------- References ------------------------------------------------------ */
+  function renderRefs(){
+    const c = ui.$("#refs-content");
+    c.innerHTML = `
+      <h3>Stage 1 — The Spark</h3>
+      <ul>
+        <li>Turing, A. M. (1950). "Computing Machinery and Intelligence." <em>Mind</em>, 59(236), 433–460.</li>
+        <li>McCarthy, J., Minsky, M., Rochester, N., &amp; Shannon, C. (1955). "A Proposal for the Dartmouth Summer Research Project on Artificial Intelligence."</li>
+      </ul>
+      <h3>Stage 2 — First Words</h3>
+      <ul>
+        <li>Weizenbaum, J. (1966). "ELIZA—A Computer Program for the Study of Natural Language Communication Between Man and Machine." <em>Communications of the ACM</em>, 9(1), 36–45.</li>
+      </ul>
+      <h3>Stage 3 — The Long Winter</h3>
+      <ul>
+        <li>Lighthill, J. (1973). "Artificial Intelligence: A General Survey." Science Research Council (UK).</li>
+        <li>Buchanan, B. G., &amp; Shortliffe, E. H. (1984). <em>Rule-Based Expert Systems: The MYCIN Experiments of the Stanford Heuristic Programming Project</em>.</li>
+      </ul>
+      <h3>Stage 4 — The Comeback</h3>
+      <ul>
+        <li>IBM Research. "Deep Blue." (1997 match vs. Garry Kasparov.)</li>
+      </ul>
+      <h3>Stage 5 — The Grand Challenge</h3>
+      <ul>
+        <li>DARPA. "DARPA Grand Challenge" (2004, 2005, 2007 Urban Challenge).</li>
+        <li>Russakovsky, O. et al. (2015). "ImageNet Large Scale Visual Recognition Challenge."</li>
+        <li>Krizhevsky, A., Sutskever, I., &amp; Hinton, G. (2012). "ImageNet Classification with Deep Convolutional Neural Networks." (AlexNet)</li>
+      </ul>
+      <h3>Stage 6 — The Age of Models</h3>
+      <ul>
+        <li>Silver, D. et al. (2016). "Mastering the game of Go with deep neural networks and tree search." <em>Nature</em>, 529, 484–489.</li>
+        <li>Vaswani, A. et al. (2017). "Attention Is All You Need." NeurIPS 2017.</li>
+      </ul>
+      <h3>General / DARPA's role in AI history</h3>
+      <ul>
+        <li>Roland, A., &amp; Shiman, P. (2002). <em>Strategic Computing: DARPA and the Quest for Machine Intelligence, 1983–1993</em>. MIT Press.</li>
+        <li>DARPA. "AI Next Campaign" (2018–).</li>
+        <li>Heilmeier, G. H. "Heilmeier's Catechism" (the eight questions every proposal must answer; widely reproduced on DARPA's site).</li>
+        <li>Leiner, B. M. et al. (1997). "Brief History of the Internet." Internet Society. (ARPANET 1969 origins, four nodes: UCLA, SRI, UCSB, Utah.)</li>
+        <li>Engelbart, D. (1968). "The Mother of All Demos." Fall Joint Computer Conference, San Francisco. (ARPA-funded.)</li>
+        <li>SRI International. "Shakey the Robot" (1966–1972, ARPA-funded).</li>
+        <li>DARPA. "Cyber Grand Challenge" (final event held at DEF CON 24, 2016).</li>
+        <li>DARPA. "Robotics Challenge" (DRC Finals, June 2015, Pomona, CA).</li>
+      </ul>
+      <p class="small dim">Sources verified by the developer — please double-check before citing in school work.</p>
+    `;
+  }
+
+  /* ------- BOOT / RUN ------------------------------------------------------ */
+  function startGame(){
+    ui.show("game");
+    state.timerLeft = 5*60*1000;
+    state.timerStart = Date.now();
+    state.timeUpShown = false;
+    state.score = 0;
+    state.stagesCleared = new Set();
+    state.badges = new Set([...state.eastereggsFound].map(e => e === "konami" ? "heilmeier-apprentice" : e));
+    state.inventory = ["stylus"];
+    state.attempts = {1:0,2:0,3:0,4:0,5:0,6:0};
+    state.hintsUsedFor = new Set();
+    state.blackboardBonks = 0;
+
+    // Theme detection: set scanlines default off on mobile (already off);
+    // honor prefers-reduced-motion
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    state.reduced = reduced;
+
+    loadRoom("hub");
+    ui.setHud();
+    showSplash("ARPANET Hub", "Walk to a glowing portal");
+    // Story preamble shown once per run, after the splash dismisses.
+    state.preambleShown = false;
+    setTimeout(() => {
+      if(!state.preambleShown && !anyModalOpen()){
+        state.preambleShown = true;
+        showDialog("The Codex of Sparks — your quest", STRINGS.preamble);
+      }
+    }, 1300);
+  }
+  function quitToTitle(){
+    ui.closeAllModals();
+    state.paused = false;
+    ui.show("title");
+  }
+  function resetRun(){
+    state.score = 0;
+    state.stagesCleared = new Set();
+    state.badges = new Set();
+    state.inventory = ["stylus"];
+    state.eastereggsFound = new Set(state.eastereggsFound); // preserve konami unlock
+    state.attempts = {1:0,2:0,3:0,4:0,5:0,6:0};
+    state.hintsUsedFor = new Set();
+    state.blackboardBonks = 0;
+    state.timerLeft = 5*60*1000;
+    state.timeUpShown = false;
+  }
+
+  /* ------- SELF-TESTS -----------------------------------------------------
+     Lightweight unit tests that run once at boot. They validate static data
+     (every stage has an intro / edu / item / puzzle for every tier, every
+     map's row/column counts agree, the Codex pedestal exists) AND simulate
+     the keystroke regression that prompted this round of fixes — typing into
+     the name input must NOT be blocked by the global keydown handler.
+     Failures are logged to the console AND surface a visible amber banner.
+  -------------------------------------------------------------------------- */
+  function selfTest(){
+    const errors = [];
+    const ok = (cond, msg) => { if(!cond) errors.push(msg); };
+
+    // STRINGS shape
+    ["preamble","stageIntros","codexFinale","stageNames","stageEras","stageEdu","items","tierNames","heilmeier","arpanet","offices","encouragements","correct"].forEach(k => {
+      ok(STRINGS[k] != null, "STRINGS missing key: "+k);
+    });
+
+    // 6 stages: intro, era, edu, name, puzzles per tier
+    for(let s=1; s<=6; s++){
+      ok(!!STRINGS.stageNames[s-1],  `stageNames[${s-1}] missing`);
+      ok(!!STRINGS.stageEras[s-1],   `stageEras[${s-1}] missing`);
+      ok(!!STRINGS.stageEdu[s-1],    `stageEdu[${s-1}] missing`);
+      ok(!!STRINGS.stageIntros[s-1], `stageIntros[${s-1}] missing`);
+      ["sprout","cadet","operative"].forEach(t => {
+        try {
+          const def = puzzles[s][t]();
+          ok(def && def.kind, `puzzles[${s}][${t}] returned no kind`);
+        } catch(e){
+          errors.push(`puzzles[${s}][${t}] threw: ${e.message}`);
+        }
+      });
+    }
+
+    // Items the stages award
+    ["stylus","tape","scroll","compass","shard","key","crystal"].forEach(k => {
+      ok(STRINGS.items[k] && STRINGS.items[k].glyph, "items missing/invalid: "+k);
+    });
+
+    // Hub map shape + Codex presence
+    const hub = ROOMS.hub;
+    ok(hub.map.length === hub.rows, "hub: row count mismatch");
+    hub.map.forEach((r,i) => ok(r.length === hub.cols, `hub: row ${i} width mismatch`));
+    ok(!!hub.objects.find(o => o.kind === "codex"), "hub: missing Codex pedestal");
+    [1,2,3,4,5,6].forEach(s => {
+      ok(!!hub.objects.find(o => o.kind === "portal" && o.stage === s), "hub: missing portal "+s);
+    });
+
+    // Stage rooms shape + objects
+    for(let s=1;s<=6;s++){
+      const r = ROOMS["s"+s]; ok(!!r, "room s"+s+" missing");
+      if(!r) continue;
+      ok(r.map.length === r.rows, `s${s}: row count mismatch`);
+      r.map.forEach((row,i) => ok(row.length === r.cols, `s${s}: row ${i} width mismatch`));
+      ok(!!r.objects.find(o => o.kind === "puzzle"), `s${s}: missing puzzle pedestal`);
+      ok(!!r.objects.find(o => o.kind === "exit"),   `s${s}: missing exit door`);
+    }
+
+    // KEYSTROKE REGRESSION TEST: simulate typing letters into the name field.
+    // Before the fix, the global keydown listener called preventDefault on
+    // 'a','s','d','w', and Space, which silently ate them.
+    try {
+      const inp = document.getElementById("hero-name");
+      if(inp){
+        inp.value = "";
+        inp.focus();
+        ["a","s","d","w"," "].forEach(letter => {
+          const ev = new KeyboardEvent("keydown", { key: letter, bubbles: true, cancelable: true });
+          window.dispatchEvent(ev);
+          ok(!ev.defaultPrevented,
+             `keystroke regression: '${letter === " " ? "Space" : letter}' was preventDefault'd while typing in #hero-name`);
+        });
+        inp.blur();
+      } else {
+        errors.push("self-test: #hero-name input not found");
+      }
+    } catch(e){
+      errors.push("self-test: keystroke sim threw: "+e.message);
+    }
+
+    if(errors.length){
+      console.warn("Quest for DARPA — self-test FAILED:\n  • " + errors.join("\n  • "));
+      const banner = document.createElement("div");
+      banner.style.cssText =
+        "position:fixed;left:8px;right:8px;top:8px;z-index:9999;background:#ff9a3c;" +
+        "color:#1a1a1a;padding:10px 14px;border:3px solid #1a1a1a;border-radius:6px;" +
+        "font-family:var(--ui-body);font-size:13px;box-shadow:0 4px 0 rgba(0,0,0,.3);";
+      banner.textContent = "Self-test found "+errors.length+" issue(s) — see browser console.";
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 6000);
+    } else {
+      console.log("Quest for DARPA — self-test passed ✓ ("
+        + (6*3) + " puzzles, "
+        + ROOMS.hub.objects.length + " hub objects, keystroke handler clean)");
+    }
+    return errors;
+  }
+
+  function boot(){
+    wire();
+    drawTitleHero();
+    // Default visible screen is title
+    ui.show("title");
+    // Run self-tests after wire() so DOM listeners are in place.
+    selfTest();
+  }
+
+  return { boot, state, STRINGS };
+})();
+
+window.addEventListener("DOMContentLoaded", () => Q.boot());
+</script>
+</body>
+</html>
