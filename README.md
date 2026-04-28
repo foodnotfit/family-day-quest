@@ -55,7 +55,7 @@ Each stage awards an artifact: Turing Tape → ELIZA Scroll → Rule Compass →
 
 ## Easter eggs
 
-There are **seven** hidden secrets. The final certificate counts how many the player found. Public hints (no full spoilers in case a kid reads the README):
+There are **eight** hidden secrets. The final certificate counts how many the player found. Public hints (no full spoilers in case a kid reads the README):
 
 1. **Konami's whisper.** A famous old code, entered on the title screen. Unlocks a gold "DARPA HARD" tunic and a Heilmeier's Apprentice badge.
 2. **Bonk the blackboard.** Stage 1. There's a chalk-covered blackboard. Walk into it — repeatedly. Something opens up.
@@ -64,6 +64,7 @@ There are **seven** hidden secrets. The final certificate counts how many the pl
 5. **A bug on a pedestal.** Stage 4. References the 2016 DARPA Cyber Grand Challenge at DEF CON 24.
 6. **The DRC door.** Stage 5. The 2015 DARPA Robotics Challenge finals.
 7. **A weathered stone tablet.** The hub. "1969. Four nodes. One idea. Everything else followed."
+8. **A hidden archway.** Tucked into the side of the hub. A glowing magenta doorway you might walk past without noticing — but step inside for a nice little surprise.
 
 Implementation locations and exact triggers are in [`DEVNOTES.md`](./DEVNOTES.md).
 
