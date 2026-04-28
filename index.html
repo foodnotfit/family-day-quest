@@ -2579,6 +2579,15 @@ const Q = (() => {
         break;
       }
       case "codex": {
+        // Self-heal: if all 6 stages are cleared, the player has earned all 6
+        // artifacts even if a prior dialog dismissal path skipped the inventory
+        // push. Reconcile inventory from stagesCleared so the Codex isn't
+        // permanently locked.
+        if(state.stagesCleared.size >= 6){
+          const all = ["tape","scroll","compass","shard","key","crystal"];
+          all.forEach(k => { if(!state.inventory.includes(k)) state.inventory.push(k); });
+          ui.setHud();
+        }
         // Final assembly point. Locked until all 6 artifacts are gathered.
         if(state.inventory.length < 7){
           const got = state.inventory.length - 1; // minus the stylus-sword
@@ -3011,6 +3020,14 @@ const Q = (() => {
     if(!wasHinted) state.badges.add("clean-stage-"+stage);
     state.stagesCleared.add(stage);
     state.badges.add("stage-"+stage);
+    // Award the artifact synchronously, independent of the dialog dismissal
+    // path. Escape or click-outside on the "what we learned" dialog used to
+    // skip the onClose callback, leaving stagesCleared set but inventory short
+    // — so the Codex pedestal would say "5 of 6" with all stages cleared.
+    const itemKey = ["tape","scroll","compass","shard","key","crystal"][stage-1];
+    if(itemKey && !state.inventory.includes(itemKey)){
+      state.inventory.push(itemKey);
+    }
     audio.ok();
     ui.feedback(ui.$("#pz-feedback"), ui.rand(STRINGS.correct), true);
 
@@ -3021,11 +3038,7 @@ const Q = (() => {
         `${STRINGS.stageNames[stage-1]} — what we learned`,
         STRINGS.stageEdu[stage-1],
         () => {
-          const itemKey = ["tape","scroll","compass","shard","key","crystal"][stage-1];
-          if(itemKey){
-            state.inventory.push(itemKey);
-            showItemGet(itemKey);
-          }
+          if(itemKey) showItemGet(itemKey);
         }
       );
       ui.setHud();
@@ -3160,14 +3173,17 @@ const Q = (() => {
     // is never gated behind a correct answer.
     state.stagesCleared.add(stage);
     state.badges.add("stage-"+stage);
+    // Award artifact synchronously — see puzzleSolved for why we don't trust
+    // the dialog's onClose to do it.
+    const itemKey = ["tape","scroll","compass","shard","key","crystal"][stage-1];
+    if(itemKey && !state.inventory.includes(itemKey)){
+      state.inventory.push(itemKey);
+    }
     ui.closeModal("modal-puzzle");
     showDialog(
       `${STRINGS.stageNames[stage-1]} — what we learned`,
       STRINGS.stageEdu[stage-1],
-      () => {
-        const itemKey = ["tape","scroll","compass","shard","key","crystal"][stage-1];
-        if(itemKey){ state.inventory.push(itemKey); showItemGet(itemKey); }
-      }
+      () => { if(itemKey) showItemGet(itemKey); }
     );
   });
   ui.$("#pz-close").addEventListener("click", () => ui.closeModal("modal-puzzle"));
