@@ -249,6 +249,16 @@
     }
     .tier-card:hover{ background: #2a3460; }
     .tier-card[aria-pressed="true"]{ background: #4a3a86; border-color: var(--accent); }
+    .tier-card[data-tier="pm"]{
+      background: #2a1c08;
+      border-color: #5a4216;
+    }
+    .tier-card[data-tier="pm"]:hover{ background: #3a2810; }
+    .tier-card[data-tier="pm"][aria-pressed="true"]{
+      background: #6a4a14; border-color: #fbbf24;
+      box-shadow: 0 4px 0 #04060e, 0 0 18px rgba(251,191,36,0.45);
+    }
+    .tier-card[data-tier="pm"] .tier-name{ color: #fbbf24; }
     .tier-card .tier-name{
       font-family: var(--ui-pixel); color: var(--accent); font-size: 14px; margin-bottom: 6px;
     }
@@ -736,6 +746,17 @@
     /* Web Speech sentence highlighting */
     .speak-sentence{ transition: background .15s; padding: 1px 0; border-radius: 3px; }
     .speak-active{ background: rgba(242,193,78,0.45); box-shadow: 0 0 0 3px rgba(242,193,78,0.45); }
+    /* Narrate-toggle button while speech is in flight — distinct red/stop look */
+    .speak-btn.is-speaking{
+      background: rgba(248,81,73,0.16);
+      border-color: #f85149;
+      color: #fca5a5;
+      animation: speakPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes speakPulse{
+      0%,100% { box-shadow: 0 0 0 0 rgba(248,81,73,0.45); }
+      50%     { box-shadow: 0 0 0 6px rgba(248,81,73,0); }
+    }
 
     /* Layered "Tell me more" toggle in dialogs */
     .dialog-main{ display: inline; }
@@ -927,6 +948,11 @@
           <div class="tier-name">OPERATIVE</div>
           <div class="small">Ages 11–14</div>
           <p class="small dim">Caesar ciphers, logic grids, pathfinding, pattern completion.</p>
+        </button>
+        <button class="tier-card" role="radio" aria-pressed="false" data-tier="pm">
+          <div class="tier-name">🎖 DARPA PM</div>
+          <div class="small">Adult / Expert</div>
+          <p class="small dim">Same puzzles as Operative, but every brief cites primary sources, papers, and DARPA programs by name. For program managers, scientists, and curious grown-ups.</p>
         </button>
       </div>
       <div class="row">
@@ -1279,7 +1305,7 @@ const Q = (() => {
       "That's the one!",
       "Spot on, Explorer."
     ],
-    tierNames: { sprout: "SPROUT", cadet: "CADET", operative: "OPERATIVE" },
+    tierNames: { sprout: "SPROUT", cadet: "CADET", operative: "OPERATIVE", pm: "DARPA PM" },
 
     // The opening story. Shown once per run when the player first arrives in the hub.
     preamble:
@@ -1297,7 +1323,9 @@ const Q = (() => {
         cadet:  { title: "Stage 1: The Spark",
                   text: "Welcome to the dawn of computers — the 1940s and 50s.\n\n• In 1950, Alan Turing wrote a paper asking 'can machines think?' (the Turing Test).\n• In 1956, a workshop at Dartmouth gave the whole field a name: 'artificial intelligence'.\n• Computers back then ran on glowing glass vacuum tubes.\n\nAt Bletchley Park during WWII, codebreakers used machines to spot patterns in secret messages.\n\nYour task: spot the pattern and prove your spark." },
         operative:{ title: "Stage 1: The Spark",
-                    text: "Welcome to the dawn of computing — the 1940s and 1950s.\n\n• In 1950, Alan Turing wrote a paper asking 'can machines think?' That became the Turing Test.\n• In 1956, John McCarthy organized a workshop at Dartmouth that gave the field its name: 'artificial intelligence'.\n• Computers back then ran on glowing glass parts called vacuum tubes.\n\nAt Bletchley Park during WWII, codebreakers used machines (called 'bombes') to spot patterns in secret messages. The big idea: spot the rule, beat the puzzle.\n\nYour task: decode the cipher and prove your spark." }
+                    text: "Welcome to the dawn of computing — the 1940s and 1950s.\n\n• In 1950, Alan Turing wrote a paper asking 'can machines think?' That became the Turing Test.\n• In 1956, John McCarthy organized a workshop at Dartmouth that gave the field its name: 'artificial intelligence'.\n• Computers back then ran on glowing glass parts called vacuum tubes.\n\nAt Bletchley Park during WWII, codebreakers used machines (called 'bombes') to spot patterns in secret messages. The big idea: spot the rule, beat the puzzle.\n\nYour task: decode the cipher and prove your spark." },
+        pm:       { title: "🎖 Stage 1 — The Spark (1940s–1950s)",
+                    text: "📖 Primary sources & era flavor — DARPA PM brief.\n\n⚡ Turing 1950 — 'Computing Machinery and Intelligence' (Mind, vol. LIX, no. 236) introduces the imitation game. Concludes the controversial 30%-deception threshold for human raters at 5 minutes.\n\n⚡ McCarthy, Minsky, Rochester & Shannon, Dartmouth Summer Research Project 1956 — coins 'artificial intelligence', proposes a two-month study to make machines 'use language, form abstractions and concepts, solve kinds of problems now reserved for humans'. Funded by Rockefeller; first formal AI grant.\n\n⚡ Hardware: ENIAC (1945, 17,468 vacuum tubes, 30 tons), UNIVAC I (1951, first commercial). MTBF measured in hours.\n\n⚡ Codebreaking lineage: Bletchley's Bombes (Turing & Welchman) and Colossus (Flowers, 1943) are the first programmable electronic computers — same lineage that DARPA would later fund directly.\n\n🎯 Your task: decode the cipher." }
       },
       { // STAGE 2 — First Words
         sprout: { title: "Stage 2: First Words",
@@ -1305,7 +1333,9 @@ const Q = (() => {
         cadet:  { title: "Stage 2: First Words",
                   text: "Welcome to the 1960s. ARPA (later DARPA) is funding the first AI labs at MIT, Stanford, and CMU.\n\n• In 1966 at MIT, Joseph Weizenbaum writes ELIZA — the first famous chatbot.\n• ELIZA pretended to be a therapist by turning your sentences into questions.\n• In 1969, ARPANET (the early internet) switches on with four nodes: UCLA, SRI, UCSB, Utah.\n\nYour task: pick what ELIZA was." },
         operative:{ title: "Stage 2: First Words",
-                    text: "Welcome to the 1960s. ARPA (the predecessor to DARPA) is funding the first AI labs at MIT, Stanford, and Carnegie Mellon.\n\n• In 1966 at MIT, Joseph Weizenbaum writes ELIZA — the first famous chatbot. ELIZA pretended to be a therapist by turning your sentences into questions. People felt understood, even though ELIZA didn't really understand a thing.\n• In 1969, ARPANET (the early internet) switches on with four nodes: UCLA, SRI, UCSB, and Utah.\n\nYour task: name the city of Weizenbaum's lab." }
+                    text: "Welcome to the 1960s. ARPA (the predecessor to DARPA) is funding the first AI labs at MIT, Stanford, and Carnegie Mellon.\n\n• In 1966 at MIT, Joseph Weizenbaum writes ELIZA — the first famous chatbot. ELIZA pretended to be a therapist by turning your sentences into questions. People felt understood, even though ELIZA didn't really understand a thing.\n• In 1969, ARPANET (the early internet) switches on with four nodes: UCLA, SRI, UCSB, and Utah.\n\nYour task: name the city of Weizenbaum's lab." },
+        pm:       { title: "🎖 Stage 2 — First Words (1960s)",
+                    text: "📖 Primary sources & era flavor — DARPA PM brief.\n\n💬 Weizenbaum, J. (1966) 'ELIZA — A Computer Program for the Study of Natural Language Communication Between Man and Machine' (CACM 9:1, 36–45). Pattern-matching script DOCTOR, ~200 lines of MAD-Slip on the IBM 7094. Weizenbaum himself was alarmed by how much users projected onto it — the seed of the 'ELIZA effect'.\n\n🌐 ARPANET (Oct 29, 1969): UCLA → SRI link, first message 'lo' (the system crashed before 'login' completed). Built under J.C.R. Licklider's 1962 'Intergalactic Computer Network' vision; Bob Taylor & Larry Roberts ran the program. The TCP/IP stack (Cerf & Kahn 1974) descended from this work and still routes packets today.\n\n🧠 SHRDLU (Winograd, MIT 1968–70) — natural-language understanding in a blocks micro-world; arguably the high-water mark of symbolic NLP before the cold front of Stage 3.\n\n🎯 Your task: identify Weizenbaum's institution." }
       },
       { // STAGE 3 — The Long Winter
         sprout: { title: "Stage 3: The Long Winter",
@@ -1313,7 +1343,9 @@ const Q = (() => {
         cadet:  { title: "Stage 3: The Long Winter",
                   text: "Welcome to the late 70s and 80s. After big promises fell short, AI funding froze.\n\nBut one approach kept working: EXPERT SYSTEMS — programs made of strict IF-THEN rules. Stanford's MYCIN even suggested antibiotics. They were narrow but reliable: read the rules, follow them, get the answer.\n\nYour task: watch the colors flash, then press them in the same order." },
         operative:{ title: "Stage 3: The Long Winter",
-                    text: "Welcome to the late 1970s and 1980s. After big promises fell short, AI funding froze — the Lighthill Report (UK, 1973) was a chilly turning point.\n\nBut one approach kept working: 'expert systems' — programs made of strict IF-THEN rules. Stanford's MYCIN suggested antibiotics. Other systems diagnosed equipment faults. They were narrow but reliable.\n\nYour task: read the IF-THEN rules carefully and follow the logic to the right answer." }
+                    text: "Welcome to the late 1970s and 1980s. After big promises fell short, AI funding froze — the Lighthill Report (UK, 1973) was a chilly turning point.\n\nBut one approach kept working: 'expert systems' — programs made of strict IF-THEN rules. Stanford's MYCIN suggested antibiotics. Other systems diagnosed equipment faults. They were narrow but reliable.\n\nYour task: read the IF-THEN rules carefully and follow the logic to the right answer." },
+        pm:       { title: "🎖 Stage 3 — The Long Winter (1973–1993)",
+                    text: "📖 Primary sources & era flavor — DARPA PM brief.\n\n❄️ Lighthill, J. (1973) 'Artificial Intelligence: A General Survey' — the UK Science Research Council report that triggered the first AI winter. Its 'combinatorial explosion' critique of search-based AI led to the gutting of UK AI funding outside Edinburgh.\n\n🧠 Buchanan & Shortliffe (1984) 'Rule-Based Expert Systems: The MYCIN Experiments of the Stanford Heuristic Programming Project'. MYCIN: ~600 production rules + certainty factors; outperformed Stanford infectious-disease faculty in blinded trials but was never deployed (regulatory + workflow friction).\n\n🏭 Commercial peak: DEC's XCON/R1 (McDermott 1980) saved DEC ~$25M/yr configuring VAX systems — proof expert systems could ship.\n\n💸 The bust: LISP-machine vendors (Symbolics, LMI) collapsed when Sun/IBM workstations matched their performance at a tenth the price. ~1987–93 funding trough.\n\n🌐 Meanwhile: ARPANET → NSFNET transition (1986); TCP/IP became the universal protocol in 1983, scaling beyond the research labs that had quietly kept it running through the AI winter.\n\n🎯 Your task: follow the IF-THEN production-rule chain." }
       },
       { // STAGE 4 — The Comeback
         sprout: { title: "Stage 4: The Comeback",
@@ -1321,7 +1353,9 @@ const Q = (() => {
         cadet:  { title: "Stage 4: The Comeback",
                   text: "Welcome to the 1990s. In May 1997, IBM's Deep Blue defeated world chess champion Garry Kasparov.\n\nThe trick wasn't 'thinking' — it was searching far ahead, evaluating millions of possible moves per second.\n\nYour task: pick the game Deep Blue won." },
         operative:{ title: "Stage 4: The Comeback",
-                    text: "Welcome to the 1990s. In May 1997, IBM's Deep Blue defeated world chess champion Garry Kasparov. The trick wasn't 'thinking' — it was searching millions of possible moves per second.\n\nAt the same time, DARPA's DART logistics tool (used during the 1991 Gulf War) was famously said to have repaid DARPA's entire AI investment in one project.\n\nYour task: name the company that built Deep Blue." }
+                    text: "Welcome to the 1990s. In May 1997, IBM's Deep Blue defeated world chess champion Garry Kasparov. The trick wasn't 'thinking' — it was searching millions of possible moves per second.\n\nAt the same time, DARPA's DART logistics tool (used during the 1991 Gulf War) was famously said to have repaid DARPA's entire AI investment in one project.\n\nYour task: name the company that built Deep Blue." },
+        pm:       { title: "🎖 Stage 4 — The Comeback (1990s)",
+                    text: "📖 Primary sources & era flavor — DARPA PM brief.\n\n♟ Campbell, Hoane & Hsu (2002) 'Deep Blue' (Artificial Intelligence 134:57–83). Custom 480-chip alpha-beta search at ~200M positions/sec on a 30-node IBM SP2. Game 6, May 11 1997: Kasparov resigned in 19 moves. The architecture was decidedly NOT 'general intelligence' — but it shattered the public's last 'computers will never...' chess argument.\n\n🚛 DARPA DART (Dynamic Analysis and Replanning Tool, 1991 Gulf War). DARPA Director Tony Tether and Vint Cerf both publicly stated DART repaid DARPA's entire 30-year AI investment in a single deployment cycle.\n\n📊 Statistical NLP rises: IBM's Candide MT (Brown et al. 1990) replaces hand-written rules with corpus-trained models. Vapnik's SVMs (1995) win the kernel methods era.\n\n🌐 1991: Tim Berners-Lee proposes the Web atop the existing internet stack. By 1995 the .com bubble is mid-inflation, and AI labs that survived the winter quietly enter the deep-learning incubation that pays off in Stage 6.\n\n🎯 Your task: name the firm behind Deep Blue." }
       },
       { // STAGE 5 — The Grand Challenge
         sprout: { title: "Stage 5: The Grand Challenge",
@@ -1329,7 +1363,9 @@ const Q = (() => {
         cadet:  { title: "Stage 5: The Grand Challenge",
                   text: "Welcome to the 2000s and early 2010s. DARPA's Grand Challenges (2004, 2005, 2007) pushed self-driving cars across the desert. In 2005, Stanford's 'Stanley' won. Then ImageNet (2009) and AlexNet (2012) taught computers to SEE.\n\nA self-driving car has two jobs: spot what matters, and find a safe path.\n\nYour task: drive Stanley to the goal." },
         operative:{ title: "Stage 5: The Grand Challenge",
-                    text: "Welcome to the 2000s and early 2010s. DARPA's Grand Challenges (2004, 2005, 2007 Urban Challenge) pushed self-driving cars across the desert. In 2004, no team finished. In 2005, Stanford's 'Stanley' won. Then ImageNet (2009) and AlexNet (2012) taught computers to see.\n\nYour task: plan a safe route around the obstacles." }
+                    text: "Welcome to the 2000s and early 2010s. DARPA's Grand Challenges (2004, 2005, 2007 Urban Challenge) pushed self-driving cars across the desert. In 2004, no team finished. In 2005, Stanford's 'Stanley' won. Then ImageNet (2009) and AlexNet (2012) taught computers to see.\n\nYour task: plan a safe route around the obstacles." },
+        pm:       { title: "🎖 Stage 5 — The Grand Challenge (2000s–2010s)",
+                    text: "📖 Primary sources & era flavor — DARPA PM brief.\n\n🚗 DARPA Grand Challenge: 2004 (Mojave, no finishers — best vehicle covered 7.4 miles); 2005 (Stanford's Stanley wins, 132 miles in 6h54m, Sebastian Thrun PI); 2007 Urban Challenge (CMU's Boss takes first, traffic + intersections). Reference: Thrun et al. (2006) 'Stanley: The Robot that Won the DARPA Grand Challenge' (J. Field Robotics 23:9). Direct lineage to Waymo, Cruise, Aurora.\n\n👁 Computer vision: Deng et al. (2009) 'ImageNet: A Large-Scale Hierarchical Image Database' (CVPR). Krizhevsky, Sutskever & Hinton (2012) 'ImageNet Classification with Deep Convolutional Neural Networks' — AlexNet, top-5 error 15.3% vs 26.2% second place. The deep learning revolution begins on two NVIDIA GTX 580s.\n\n🧠 Mnih et al. (2015) 'Human-level control through deep reinforcement learning' (Nature 518:529) — DQN beats Atari benchmarks. Silver et al. (2016) AlphaGo defeats Lee Sedol 4–1 in Seoul, March 2016.\n\n🛡 DARPA programs of the era: Explainable AI (XAI, 2017), AI Next ($2B, 2018), Lifelong Learning Machines (L2M).\n\n🎯 Your task: pick a path through the obstacle field (search & planning, the same problem Stanley solved)." }
       },
       { // STAGE 6 — The Age of Models (Transformer → ChatGPT → Agentic AI)
         sprout: { title: "Stage 6: The Age of Models",
@@ -1337,7 +1373,9 @@ const Q = (() => {
         cadet:  { title: "Stage 6: The Age of Models",
                   text: "Welcome to today. In 2016, AlphaGo beat Lee Sedol at Go. In 2017, the TRANSFORMER architecture was introduced. Then things got fast:\n\n• 2022: ChatGPT (OpenAI) launches and reaches 100 million users in two months.\n• 2023: Claude (Anthropic), Gemini (Google), and others arrive — generative AI explodes.\n• 2024–26: AGENTIC AI — models that don't just answer, they take ACTIONS: browse, plan, write code.\n\nYour task: continue the pattern." },
         operative:{ title: "Stage 6: The Age of Models",
-                    text: "Welcome to today. In March 2016, AlphaGo defeated Go champion Lee Sedol. In 2017, the Transformer architecture was introduced ('Attention Is All You Need'). Then the pace exploded:\n\n• November 2022: OpenAI's ChatGPT launches — fastest-growing consumer app ever, 100 million users in 2 months.\n• 2023+: Claude (Anthropic), Gemini (Google), and others. Generative AI era — models can write, code, draw, and reason.\n• 2024–26: Agentic AI — models that USE TOOLS, browse the web, write programs, and complete multi-step tasks on their own.\n\nYour task: continue the pattern, the way a transformer would." }
+                    text: "Welcome to today. In March 2016, AlphaGo defeated Go champion Lee Sedol. In 2017, the Transformer architecture was introduced ('Attention Is All You Need'). Then the pace exploded:\n\n• November 2022: OpenAI's ChatGPT launches — fastest-growing consumer app ever, 100 million users in 2 months.\n• 2023+: Claude (Anthropic), Gemini (Google), and others. Generative AI era — models can write, code, draw, and reason.\n• 2024–26: Agentic AI — models that USE TOOLS, browse the web, write programs, and complete multi-step tasks on their own.\n\nYour task: continue the pattern, the way a transformer would." },
+        pm:       { title: "🎖 Stage 6 — The Age of Models (2017–2026)",
+                    text: "📖 Primary sources & era flavor — DARPA PM brief.\n\n🧬 Vaswani et al. (2017) 'Attention Is All You Need' (NeurIPS). Self-attention replaces recurrence; encoder-decoder Transformer architecture. The single most-cited ML paper of the modern era.\n\n📈 Scaling laws: Kaplan et al. (2020) 'Scaling Laws for Neural Language Models' (arXiv:2001.08361); Hoffmann et al. (2022) 'Training Compute-Optimal Large Language Models' (Chinchilla). Compute, data, and parameter count co-scale on power laws.\n\n💬 GPT-3 (2020, 175B params), ChatGPT (Nov 2022), GPT-4 (March 2023), Claude 3 family (2024), Claude Opus 4.6 / Sonnet 4.6 / Haiku 4.5 (2025–26). RLHF (Christiano et al. 2017; Ouyang et al. 2022 InstructGPT) shaped them into helpful assistants.\n\n🤖 Agentic AI: tool-use, browser-use, multi-step planning. ReAct (Yao et al. 2022), reflection patterns, multi-agent orchestration. The active research frontier.\n\n🛡 DARPA today: Quantum Benchmarking Initiative, US2QC, ASIMOV (assurance for autonomous AI), AIE programs continuing the pipeline.\n\n🎯 Your task: complete the sequence — that's literally what a transformer's last layer does." }
       }
     ],
 
@@ -1498,7 +1536,9 @@ const Q = (() => {
       // reading order (NW, NE, W, E, SW, SE) so the kid walks past 1-2-3-4-5-6
       // as their eye sweeps left→right, top→bottom.
       // ARPANET 1969 nodes (UCLA, SRI, UCSB, Utah) sit in the four map corners.
-      // The "?" at row 9 col 16 is the HIDDEN CREDITS ARCHWAY -- 8th easter egg.
+      // The "?" embedded in the bottom-wall perimeter is the HIDDEN CREDITS
+      // PASSAGE — 8th easter egg. It looks like a wall block but glows
+      // gently; observant kids can walk straight through it.
       map: [
         "####################",
         "#..................#",
@@ -1509,8 +1549,8 @@ const Q = (() => {
         "#..s............s..#",
         "#....5.........6...#",
         "#.N..,..,..,.....N.#",
-        "#...............?..#",
-        "####################"
+        "#..................#",
+        "################?###"
       ],
       objects: [
         // Stage portals 1..6 keyed by tile char
@@ -1558,33 +1598,45 @@ const Q = (() => {
     s1: {
       theme: "lab1",
       cols: 16, rows: 11,
+      // Stage 1 enriched: puzzles test cipher decoding (operative) and pattern
+      // matching (sprout/cadet). New "Cipher Primer" sign teaches a Caesar
+      // shift with a worked example so the kid has the tool before the puzzle.
       map: [
         "################",
         "#..............#",
-        "#.b...........e#",
+        "#.b....h......e#",
         "#..............#",
-        "#....p.........#",
+        "#....p..t......#",
         "#..............#",
         "#.....s........#",
         "#..............#",
-        "#.....v........#",
+        "#.....v...m....#",
         "#......d.......#",
         "################"
       ],
       objects: [
         { ch: "p", id: "puzzle1", kind: "puzzle", stage: 1 },
         { ch: "s", id: "sign1", kind: "sign",
-          title: "A chalk-dusted sign",
-          text: "Welcome to The Spark. In 1950 Turing asked: can a machine think? In 1956 Dartmouth gave the field its name." },
+          title: "📜 A chalk-dusted sign",
+          text: "Welcome to The Spark.\n\n• 1950: Alan Turing asks 'can a machine think?'\n• 1956: a workshop at Dartmouth gives the field its name — 'artificial intelligence'.\n• Computers ran on glowing glass parts called vacuum tubes." },
+        { ch: "h", id: "primer1", kind: "sign",
+          title: "🔑 Cipher Primer (read before the puzzle!)",
+          text: "Caesar cipher: shift every letter forward in the alphabet.\n\nShift by 3:\n  A → D\n  B → E\n  C → F\n  …\n  X → A   (wrap around)\n  Y → B\n  Z → C\n\nWorked example: 'CAT' shifted by 3 = 'FDW'.\n\nTo DECODE, shift backward by the same number. Codebreakers at Bletchley Park used this idea to crack secret WWII messages." },
         { ch: "b", id: "blackboard", kind: "egg", egg: "turing",
-          title: "A blackboard covered in equations",
+          title: "🎓 A blackboard covered in equations",
           text: "Bonk it again — you can almost hear ELIZA whispering..." },
         { ch: "v", id: "vacuum", kind: "egg", egg: "bombe",
-          title: "A glowing vacuum tube",
+          title: "💡 A glowing vacuum tube",
           text: "Behind the tube, you spot rotors..." },
+        { ch: "t", id: "turing-portrait", kind: "sign",
+          title: "🖼 A small portrait — Alan Turing (1912–1954)",
+          text: "British mathematician. Cracked the Enigma cipher at Bletchley Park during WWII. Wrote 'Computing Machinery and Intelligence' in 1950 — the paper that birthed the Turing Test.\n\nHis question still hasn't been fully answered, three quarters of a century later." },
+        { ch: "m", id: "mcculloch", kind: "sign",
+          title: "🧠 A diagram on yellowed paper — McCulloch & Pitts (1943)",
+          text: "Two researchers asked: could a network of simple on/off switches imitate how a brain works?\n\nTheir 1943 paper imagined the very first 'neural network'. The math was on paper for years before any computer could run it. Today's neural networks are descendants of this drawing." },
         { ch: "e", id: "darts1", kind: "sign",
-          title: "Faded poster",
-          text: "Punch cards. Vacuum tubes. Pencils. The first AI lab tools." },
+          title: "📌 Faded poster — 'Tools of the First AI Lab'",
+          text: "Punch cards. Vacuum tubes. Pencils. Typewriters. Hand-drawn flowcharts.\n\nThe first AI was built with these — and a LOT of patience. A simple program could take days to debug because every change meant re-punching cards." },
         { ch: "d", id: "exit", kind: "exit" }
       ]
     },
@@ -1593,30 +1645,44 @@ const Q = (() => {
     s2: {
       theme: "lab2",
       cols: 16, rows: 11,
+      // Stage 2 enriched: puzzle tests Weizenbaum / MIT / "Massachusetts" recall.
+      // The new ELIZA primer sign demonstrates how ELIZA actually worked.
       map: [
         "################",
         "#..............#",
         "#.t..t..t..t...#",
-        "#..............#",
+        "#..h.........m.#",
         "#.....p........#",
         "#..............#",
         "#......n.......#",
         "#..............#",
-        "#.....s........#",
+        "#..g..s.....e..#",
         "#......d.......#",
         "################"
       ],
       objects: [
         { ch: "p", id: "puzzle2", kind: "puzzle", stage: 2 },
         { ch: "s", id: "sign2", kind: "sign",
-          title: "A teletype prints",
-          text: "ELIZA (1966) was the first chatbot. ARPA funded labs at MIT, Stanford, and CMU." },
+          title: "📜 A teletype prints",
+          text: "ELIZA (1966) was the first famous chatbot. ARPA funded labs at MIT (Cambridge, MA), Stanford, and CMU.\n\nIn 1969, ARPANET lit up with four nodes: UCLA, SRI, UCSB, Utah." },
+        { ch: "h", id: "primer2", kind: "sign",
+          title: "💬 ELIZA Primer (read before the puzzle!)",
+          text: "Joseph Weizenbaum (MIT, 1966) wrote ELIZA in just ~200 lines of code.\n\nELIZA's trick: turn your sentences into questions.\n\n  YOU: I am sad.\n  ELIZA: Why are you sad?\n\n  YOU: My friend won't talk to me.\n  ELIZA: Tell me more about your friend.\n\nELIZA didn't UNDERSTAND a thing — it just matched patterns and reflected words back. But people poured their hearts out to it anyway. That surprise is now called the 'ELIZA effect'." },
         { ch: "n", id: "shakey", kind: "egg", egg: "shakey",
-          title: "Shakey the Robot",
+          title: "🤖 Shakey the Robot",
           text: "BEEP. I am Shakey, SRI 1966–1972, ARPA-funded. I plan, I move, I bump things." },
         { ch: "t", id: "teletype", kind: "sign",
-          title: "Teletype terminal",
-          text: "> HELLO\\n> HOW DO YOU DO. PLEASE TELL ME YOUR PROBLEM." },
+          title: "💻 Teletype terminal",
+          text: "> HELLO\n> HOW DO YOU DO. PLEASE TELL ME YOUR PROBLEM.\n> Tell me about your dreams.\n> WHAT DREAMS DO YOU MEAN?" },
+        { ch: "m", id: "mit-pennant", kind: "sign",
+          title: "🏛 A pennant from MIT",
+          text: "Etched: 'Massachusetts Institute of Technology — Cambridge, MA'.\n\nWeizenbaum's lab. Same building (the famous Tech Square / Building 20) where SHRDLU and many other landmark programs were born." },
+        { ch: "g", id: "shrdlu", kind: "sign",
+          title: "🟦 A blocks-world demo (SHRDLU, 1968)",
+          text: "Terry Winograd (MIT) built SHRDLU — an AI that talked about a tiny world of colored blocks.\n\nUSER: Pick up a big red block.\nSHRDLU: OK.\nUSER: What's on top of the red block?\nSHRDLU: A green pyramid.\n\nFor a tiny world, it really seemed to UNDERSTAND. Outside that world? Still hard." },
+        { ch: "e", id: "first-message", kind: "sign",
+          title: "🌐 Plaque — ARPANET first message, 29 Oct 1969",
+          text: "From UCLA to SRI: the first packet ever sent on the ancestor of the internet.\n\nIt was supposed to read 'LOGIN'. The system crashed after the first two letters. So the very first message in the history of the internet was simply:\n\n  'lo'." },
         { ch: "d", id: "exit", kind: "exit" }
       ]
     },
@@ -1625,15 +1691,18 @@ const Q = (() => {
     s3: {
       theme: "winter",
       cols: 16, rows: 11,
+      // Stage 3 enriched: puzzle tests IF-THEN rule following (sequence memory
+      // for sprout, IF-THEN logic for cadet/operative). The new IF-THEN primer
+      // walks through one rule chain so kids learn the pattern.
       map: [
         "################",
         "#..............#",
-        "#..............#",
+        "#..h.........m.#",
         "#..r..r..r..r..#",
         "#..............#",
         "#......p.......#",
         "#..............#",
-        "#.....s........#",
+        "#.l...s.....x..#",
         "#..............#",
         "#......d.......#",
         "################"
@@ -1641,11 +1710,23 @@ const Q = (() => {
       objects: [
         { ch: "p", id: "puzzle3", kind: "puzzle", stage: 3 },
         { ch: "s", id: "sign3", kind: "sign",
-          title: "A dusty manual",
-          text: "After the 1973 Lighthill Report and 1980s expert-system bust, AI funding froze. MYCIN (Stanford) showed promise but was brittle." },
+          title: "📜 A dusty manual",
+          text: "1973: the Lighthill Report (UK) chills AI funding.\n1980s: expert systems briefly flourish, then the LISP-machine market collapses.\nBut one survivor: programs that follow strict IF-THEN rules." },
+        { ch: "h", id: "primer3", kind: "sign",
+          title: "❄️ IF-THEN Primer (read before the puzzle!)",
+          text: "An expert system is just a list of rules. The computer reads them top-to-bottom and follows the FIRST one that matches.\n\nExample (a tiny medical system):\n  IF the patient has a fever\n     AND the patient has a sore throat\n  THEN suspect strep — order a swab.\n\n  IF the patient has a runny nose\n     AND no fever\n  THEN suspect a cold — rest.\n\nMYCIN (Stanford, 1976) used ~600 rules just like this to suggest antibiotics. Narrow but reliable — exactly the kind of AI that survived the winter." },
         { ch: "r", id: "rack", kind: "sign",
-          title: "Server rack",
+          title: "🖥 Server rack",
           text: "BLINK. BLINK. The lights still blink, even when nobody is watching." },
+        { ch: "l", id: "lighthill", kind: "sign",
+          title: "❄ The Lighthill Report (UK, 1973)",
+          text: "Sir James Lighthill argued that AI's promised breakthroughs hadn't arrived because of a 'combinatorial explosion' — too many possibilities for any computer to search.\n\nResult: the British government cut AI funding outside Edinburgh. The US Defense department followed soon after. The first AI Winter had begun." },
+        { ch: "m", id: "mycin", kind: "sign",
+          title: "💊 MYCIN — Stanford, 1976",
+          text: "Built by Edward Shortliffe. ~600 IF-THEN rules. In blinded tests, MYCIN's antibiotic recommendations matched or beat infectious-disease faculty.\n\nNever deployed in clinics — the regulatory and workflow friction was too much. But the lesson stuck: a narrow AI built around real expertise can be remarkably good." },
+        { ch: "x", id: "xcon", kind: "sign",
+          title: "💼 XCON / R1 — Digital Equipment, 1980",
+          text: "John McDermott built XCON to configure VAX computer orders.\n\n~2,500 rules. Saved DEC ~$25 million per year. Proof that expert systems could ship in industry — for problems narrow enough to fit in rules." },
         { ch: "d", id: "exit", kind: "exit" }
       ]
     },
@@ -1654,15 +1735,17 @@ const Q = (() => {
     s4: {
       theme: "lab2",
       cols: 16, rows: 11,
+      // Stage 4 enriched: puzzle tests "Deep Blue / IBM / Chess" recall.
+      // Concept primer breaks down WHY brute-force search worked at chess.
       map: [
         "################",
         "#..............#",
-        "#..............#",
+        "#..h..........k#",
         "#......p.......#",
         "#..............#",
         "#..s.....e.....#",
         "#..............#",
-        "#.....c........#",
+        "#.l...c......v.#",
         "#..............#",
         "#......d.......#",
         "################"
@@ -1670,14 +1753,26 @@ const Q = (() => {
       objects: [
         { ch: "p", id: "puzzle4", kind: "puzzle", stage: 4 },
         { ch: "s", id: "sign4", kind: "sign",
-          title: "DART briefing",
-          text: "DART, used during the 1991 Gulf War, was said to have recouped DARPA's entire AI investment." },
+          title: "📜 DART briefing",
+          text: "DART (Dynamic Analysis and Replanning Tool) — used during the 1991 Gulf War to plan supply movements.\n\nDARPA Director Tony Tether and Vint Cerf both stated DART repaid DARPA's entire 30-year AI investment in a single project." },
+        { ch: "h", id: "primer4", kind: "sign",
+          title: "♟ Search Primer (read before the puzzle!)",
+          text: "Deep Blue didn't 'think' like a person — it SEARCHED.\n\nFor every move you could make, Deep Blue considered every reply your opponent could make, and every reply to THAT, and so on:\n\n  Move 1:  ~30 possibilities\n  Move 2:  ~30 × 30 = 900\n  Move 3:  ~27,000\n  Move 4:  ~810,000\n  …\n\nDeep Blue searched ~200 MILLION positions per SECOND. The trick: cut off branches that look bad early, so you don't waste time on them. That's called 'alpha-beta pruning'." },
         { ch: "e", id: "deepblue", kind: "sign",
-          title: "Glass case",
-          text: "May 1997: IBM's Deep Blue defeats Garry Kasparov at chess. Search + heuristics + speed." },
+          title: "♛ Glass case — Deep Blue (IBM)",
+          text: "11 May 1997, New York City. IBM's Deep Blue defeats world chess champion Garry Kasparov 3½–2½. Game 6 ended in 19 moves.\n\nThe headline-grabbing 'AI beat a human' moment that brought AI back into the public spotlight after the long winter." },
         { ch: "c", id: "cgc-bug", kind: "egg", egg: "cgc",
-          title: "A bug on a pedestal",
-          text: "DARPA Cyber Grand Challenge (DEF CON 24, 2016): the first all-machine hacking contest." },
+          title: "🐛 A bug on a pedestal",
+          text: "DARPA Cyber Grand Challenge (DEF CON 24, 2016): the first all-machine hacking contest — programs found and patched their own vulnerabilities in real time." },
+        { ch: "k", id: "kasparov-quote", kind: "sign",
+          title: "📰 A framed New York Times clipping",
+          text: "Garry Kasparov on losing to Deep Blue:\n\n'I'm a human being. When I see something that is well beyond my understanding, I'm afraid.'\n\nLater, Kasparov became one of the loudest voices ARGUING that humans + AI working together beats either alone." },
+        { ch: "l", id: "candide", kind: "sign",
+          title: "📝 Candide — IBM, 1990",
+          text: "While Deep Blue worked on chess, IBM researchers Brown, Pietra, and others built Candide — a French→English translator.\n\nIts trick: instead of writing rules by hand, learn from millions of EXAMPLES of translated text. The statistical revolution in language was beginning." },
+        { ch: "v", id: "vapnik", kind: "sign",
+          title: "📐 SVMs — Vapnik & Cortes, 1995",
+          text: "Vladimir Vapnik (originally USSR, later Bell Labs) developed Support Vector Machines.\n\nFor a decade, SVMs were the best tool for classifying images, text, and sound. They beat hand-written rules and neural networks both — until deep learning came roaring back in Stage 5." },
         { ch: "d", id: "exit", kind: "exit" }
       ]
     },
@@ -1686,30 +1781,48 @@ const Q = (() => {
     s5: {
       theme: "desert",
       cols: 16, rows: 11,
+      // Stage 5 enriched: puzzle tests path-planning (avoid obstacles, reach
+      // goal). Primer teaches A* / breadth-first thinking. Plus extra ImageNet
+      // and robotics-challenge era flavor.
       map: [
         "################",
         "#..............#",
-        "#..............#",
+        "#..h..........i#",
         "#......p.......#",
         "#..............#",
-        "#.....v........#",
+        "#.....v.....a..#",
         "#..............#",
         "#.s.....r......#",
-        "#..............#",
+        "#.l...........x#",
         "#......d.......#",
         "################"
       ],
       objects: [
         { ch: "p", id: "puzzle5", kind: "puzzle", stage: 5 },
         { ch: "s", id: "sign5", kind: "sign",
-          title: "A road sign",
-          text: "DARPA Grand Challenge: 2004 (no finishers), 2005 Stanford's 'Stanley' wins, 2007 Urban Challenge. ImageNet 2009; AlexNet 2012." },
+          title: "🛣 A road sign",
+          text: "DARPA Grand Challenge — three years that changed AI:\n\n• 2004: nobody finished. Best team made it 7.4 miles.\n• 2005: Stanford's 'Stanley' wins, 132 miles in 6h54m.\n• 2007 Urban Challenge: city traffic. CMU's 'Boss' takes first.\n\nThen: ImageNet (2009) → AlexNet (2012) → deep learning takes over." },
+        { ch: "h", id: "primer5", kind: "sign",
+          title: "🗺 Path-Planning Primer (read before the puzzle!)",
+          text: "Stanley had to find a path through the desert without hitting a single rock. How?\n\n1. Build a MAP from sensor readings (lidar + camera).\n2. Mark the rocks as 'blocked'.\n3. Search for the SHORTEST path through unblocked cells.\n\nThe puzzle next door is the same problem in miniature: from your starting square, find a path to the goal that goes around obstacles. Plan one or two steps ahead before you commit." },
         { ch: "v", id: "stanley", kind: "sign",
-          title: "Stanley — Stanford's autonomous VW",
-          text: "Beep beep. Stanley won the 2005 DARPA Grand Challenge across the Mojave." },
+          title: "🚙 Stanley — Stanford's autonomous VW Touareg",
+          text: "Beep beep! 132 miles across the Mojave in 6 hours, 54 minutes. Average speed: ~19 mph. Top speed: 38 mph.\n\nLed by Sebastian Thrun. The team became the founding talent of Google's self-driving car project — which became Waymo." },
         { ch: "r", id: "rcdoor", kind: "egg", egg: "robotics",
-          title: "A door labeled DRC",
+          title: "🚪 A door labeled DRC",
           text: "The 2015 DARPA Robotics Challenge finals (Pomona, CA) — humanoids drove cars and turned valves." },
+        { ch: "i", id: "imagenet", kind: "sign",
+          title: "📸 ImageNet — Deng et al., 2009",
+          text: "Fei-Fei Li and her team built a dataset of 14 MILLION labeled images. \n\nIt sounds boring, but it's the single most important dataset in AI history — every modern computer-vision model was trained on it (or something like it). 'Data is the new oil', the saying goes — ImageNet is part of why." },
+        { ch: "a", id: "alexnet", kind: "sign",
+          title: "🧠 AlexNet — Krizhevsky, Sutskever, Hinton, 2012",
+          text: "Three University of Toronto researchers entered the ImageNet Large Scale Visual Recognition Challenge with a deep convolutional neural network, trained on TWO consumer NVIDIA GTX 580 GPUs.\n\nThey won by a STAGGERING margin (15.3% top-5 error vs the runner-up's 26.2%).\n\nWithin months, every serious computer-vision lab on Earth had switched to deep learning. The modern era of AI begins right here." },
+        { ch: "l", id: "lidar", kind: "sign",
+          title: "📡 A spinning sensor — LiDAR",
+          text: "Light Detection And Ranging. Spins ~10 times per second, firing pulses of laser light and timing how long they take to bounce back.\n\nResult: a high-resolution 3D map of everything around the car. Stanley used a Velodyne HDL-64E mounted on the roof — the same kind that powered the entire first wave of self-driving prototypes." },
+        { ch: "x", id: "alphago", kind: "sign",
+          title: "🪨 AlphaGo — DeepMind, 2016",
+          text: "Go has more board positions than there are atoms in the universe. Brute-force search (Deep Blue's trick) won't work.\n\nDeepMind combined deep neural networks with Monte Carlo Tree Search to defeat world champion Lee Sedol 4–1 in Seoul, March 2016. AlphaGo's 'Move 37' in game 2 stunned the entire Go community — a move no human grandmaster would have considered." },
         { ch: "d", id: "exit", kind: "exit" }
       ]
     },
@@ -1718,27 +1831,43 @@ const Q = (() => {
     s6: {
       theme: "lab3",
       cols: 16, rows: 11,
+      // Stage 6 enriched per UX audit: the puzzle tests Fibonacci pattern
+      // recognition — but kids previously hit "1,1,2,3,5,?" cold. The new
+      // "Pattern primer" sign teaches the rule with a worked example before
+      // the kid steps onto the puzzle pedestal.
       map: [
         "################",
         "#..............#",
+        "#..h..........k#",
         "#..............#",
         "#......p.......#",
         "#..............#",
-        "#.....n........#",
+        "#.....n......g.#",
         "#..............#",
-        "#.....s........#",
-        "#..............#",
+        "#.....s.......a#",
         "#......d.......#",
         "################"
       ],
       objects: [
         { ch: "p", id: "puzzle6", kind: "puzzle", stage: 6 },
+        { ch: "h", id: "primer6", kind: "sign",
+          title: "🧠 Pattern Primer (read before the puzzle!)",
+          text: "Some patterns hide in plain sight.\n\nThe Fibonacci sequence: each number = the sum of the TWO numbers before it.\n\n  • Start: 1, 1\n  • 1 + 1 = 2  →  1, 1, 2\n  • 1 + 2 = 3  →  1, 1, 2, 3\n  • 2 + 3 = 5  →  1, 1, 2, 3, 5\n  • 3 + 5 = ?  →  1, 1, 2, 3, 5, ?\n\nModern AI (transformers!) learns rules like this from examples — that's what 'pattern recognition' means." },
         { ch: "s", id: "sign6", kind: "sign",
-          title: "Glowing tablet",
-          text: "Mar 2016: AlphaGo beats Lee Sedol at Go.\n2017: Transformer introduced ('Attention Is All You Need').\nNov 2022: ChatGPT launches — fastest consumer app to 100M users.\n2023: Claude (Anthropic) and Gemini (Google) arrive.\n2024+: Agentic AI takes off — models that USE tools." },
+          title: "📜 Glowing era tablet",
+          text: "Mar 2016: AlphaGo beats Lee Sedol at Go (4–1).\n2017: Transformer introduced ('Attention Is All You Need').\nNov 2022: ChatGPT launches — fastest consumer app to 100M users.\n2023: Claude (Anthropic) and Gemini (Google) arrive.\n2024+: Agentic AI — models that USE tools, write code, plan multi-step tasks." },
         { ch: "n", id: "atlas", kind: "sign",
-          title: "Atlas the Robot waves",
-          text: "Hi! I'm Atlas. My ancestors trained at the DARPA Robotics Challenge. By 2024-26, AI 'agents' could plan multi-step tasks on their own — browse the web, write code, even build software. That's called agentic AI." },
+          title: "🤖 Atlas the Robot waves",
+          text: "Hi! I'm Atlas. My ancestors trained at the DARPA Robotics Challenge. By 2024–26, AI 'agents' could plan multi-step tasks on their own — browse the web, write code, even build software. That's called agentic AI.\n\nP.S. The Fibonacci spiral shows up in shells, sunflowers, and pinecones. Spotting it everywhere is part of why pattern-finding AI matters." },
+        { ch: "g", id: "gpt-screen", kind: "sign",
+          title: "💬 A glowing chat screen",
+          text: "USER: Continue the pattern: 1, 1, 2, 3, 5, ?\n\n🤖 ASSISTANT: That looks like the Fibonacci sequence! Each term is the sum of the two before it. The next number is 3 + 5 = 8.\n\nThat's the kind of reasoning today's models do — and exactly what the puzzle next door is asking you to try yourself." },
+        { ch: "k", id: "transformer-stack", kind: "sign",
+          title: "🧬 A stack of glowing layers",
+          text: "Etched on the side: 'Transformer architecture, 2017'.\n\nEach layer looks at every word at once and decides which words 'pay attention' to which. That's the trick that powers ChatGPT, Claude, Gemini, and the rest. Pattern in → pattern out." },
+        { ch: "a", id: "agent-orb", kind: "sign",
+          title: "🛰 A floating orb labeled AGENT",
+          text: "I plan. I act. I check my work and try again.\n\nThat loop — plan → act → reflect — is what makes me an 'agent'. I can finish multi-step tasks on my own. The DARPA program ASIMOV is researching how to make agents like me trustworthy enough for the real world." },
         { ch: "d", id: "exit", kind: "exit" }
       ]
     },
@@ -1749,14 +1878,20 @@ const Q = (() => {
     credits: {
       theme: "lab3",
       cols: 16, rows: 9,
+      // Layout designed so the 4 'sign' chars scan in this order:
+      //   row 1 col 7  -> credit-built
+      //   row 4 col 4  -> credit-thanks
+      //   row 4 col 11 -> credit-howto
+      //   row 6 col 7  -> credit-darpa-internet  (the climactic sign, sits
+      //                   directly above the exit door for a final beat)
       map: [
         "################",
-        "#..............#",
         "#......s.......#",
         "#..............#",
         "#......m.......#",
-        "#..............#",
         "#...s......s...#",
+        "#..............#",
+        "#......s.......#",
         "#......d.......#",
         "################"
       ],
@@ -1770,6 +1905,9 @@ const Q = (() => {
         { ch: "s", id: "credit-howto", kind: "sign",
           title: "🔧 How it was made",
           text: "One file. No backend. No tracking. Synthesized chiptune for sound. Pixel art drawn in code. Self-tests at boot.\n\nIf you can read this, you've explored more thoroughly than 99% of players." },
+        { ch: "s", id: "credit-darpa-internet", kind: "sign",
+          title: "🌐 One last secret",
+          text: "Psst — here's the punchline of the whole quest:\n\nDARPA invented the internet.\n\nIn October 1969, ARPANET (the Pentagon's research network) sent its very first message between UCLA and Stanford. From those four nodes grew everything that runs the modern world. Every site you visit, every video you watch, every game you play online — it all traces back to that 1969 spark.\n\nThanks for exploring. 🎖️" },
         { ch: "m", id: "credit-monument", kind: "egg", egg: "credits",
           title: "✨ A glowing monument",
           text: "Etched on the pedestal:\n\n\"For everyone who ever wondered if a machine could think.\"\n\n— OpenClaw + Agentic Coding using modern tools, 2026 🎉" },
@@ -2200,28 +2338,58 @@ const Q = (() => {
         ].forEach(([f,d,t]) => setTimeout(()=> blip(f, d, "triangle", 0.04), t));
       },
       // ---- WEB SPEECH (offline) ------------------------------------------
-      // Read briefs aloud for early/struggling readers. Pre-flight check via
-      // canSpeak(). Sentence-by-sentence highlighting via SpeechSynthesis
-      // boundary events (which not every browser fires reliably -- if they
-      // don't fire, we fall back to per-sentence chained utterances).
+      // Read briefs aloud for early/struggling readers. The narrate button is
+      // a TOGGLE — clicking while speech is in flight aborts mid-sentence.
+      //
+      // Cancellation token pattern: each speakInto call captures a closure-
+      // local "canceled" flag. cancelSpeech() invokes the registered current
+      // stop fn, which (a) calls speechSynthesis.cancel() to abort the active
+      // utterance, (b) flips the token so the chained onend/onerror handler
+      // does NOT advance to the next sentence, and (c) fires the caller's
+      // onDone callback so UI (button label, highlight class) resets.
+      _currentStop: null,
+
       canSpeak(){
         return ('speechSynthesis' in window) &&
                (window.speechSynthesis.getVoices().length > 0 ||
                 state._voicesPending);  // some browsers populate async
       },
+
+      isSpeaking(){
+        return !!this._currentStop ||
+               (('speechSynthesis' in window) &&
+                (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+      },
+
       cancelSpeech(){
+        // Run the registered stop fn FIRST so it can flip the cancellation
+        // token before we tell the synth to drop the queue. If we cancel the
+        // synth first, onerror may fire and advance the chain by one sentence
+        // before our flag is checked.
+        const stopFn = this._currentStop;
+        this._currentStop = null;
+        if(stopFn){ try { stopFn(); } catch(e) {} }
         try { if('speechSynthesis' in window) window.speechSynthesis.cancel(); }
         catch(e) {}
         document.querySelectorAll(".speak-active").forEach(el => el.classList.remove("speak-active"));
       },
-      speakInto(container, text){
-        if(!('speechSynthesis' in window)) return;
-        // Cancel anything currently being spoken
+
+      // speakInto(container, text, onDone)
+      //   onDone(wasCanceled) fires exactly once, whether the read finishes
+      //   normally or is stopped mid-sentence. Returns a stop() function that
+      //   the caller can keep a reference to (the narrate button uses it).
+      speakInto(container, text, onDone){
+        const finish = (wasCanceled) => {
+          if(typeof onDone === "function"){ try { onDone(!!wasCanceled); } catch(e) {} }
+        };
+        if(!('speechSynthesis' in window)){ finish(false); return () => {}; }
+        // Stop anything previous (and reset its UI) before we start
+        if(this._currentStop){ try { this._currentStop(); } catch(e) {} this._currentStop = null; }
         try { window.speechSynthesis.cancel(); } catch(e) {}
-        // Split into sentences (rough -- works well enough for our short copy)
+
         const parts = (text||"").split(/(?<=[.!?])\s+|\n+/).filter(s => s.trim().length);
-        if(!parts.length) return;
-        // Render container as a series of sentence spans for highlighting
+        if(!parts.length){ finish(false); return () => {}; }
+
         container.innerHTML = "";
         const spans = parts.map(p => {
           const s = document.createElement("span");
@@ -2230,28 +2398,53 @@ const Q = (() => {
           container.appendChild(s);
           return s;
         });
+
         let i = 0;
+        let canceled = false;
+        let finished = false;
+
+        const cleanup = (wasCanceled) => {
+          if(finished) return;
+          finished = true;
+          spans.forEach(s => s.classList.remove("speak-active"));
+          if(audio._currentStop === stopFn) audio._currentStop = null;
+          finish(wasCanceled);
+        };
+
+        const stopFn = () => {
+          if(finished) return;
+          canceled = true;
+          try { window.speechSynthesis.cancel(); } catch(e) {}
+          cleanup(true);
+        };
+
         const speakNext = () => {
-          if(i >= parts.length){
-            spans.forEach(s => s.classList.remove("speak-active"));
-            return;
-          }
+          if(canceled){ cleanup(true); return; }
+          if(i >= parts.length){ cleanup(false); return; }
           spans.forEach(s => s.classList.remove("speak-active"));
           spans[i].classList.add("speak-active");
           const u = new SpeechSynthesisUtterance(parts[i]);
           u.rate = 0.95; u.pitch = 1.0; u.volume = 1.0;
-          // Pick a friendly default voice if available
           const voices = window.speechSynthesis.getVoices();
           const friendly = voices.find(v => /child|kid|samantha|google us english/i.test(v.name)) || voices[0];
           if(friendly) u.voice = friendly;
-          u.onend = () => { i++; speakNext(); };
-          u.onerror = () => { i++; speakNext(); };
-          window.speechSynthesis.speak(u);
+          u.onend   = () => { if(canceled){ cleanup(true); return; } i++; speakNext(); };
+          u.onerror = () => { if(canceled){ cleanup(true); return; } i++; speakNext(); };
+          try { window.speechSynthesis.speak(u); }
+          catch(e) { i++; speakNext(); }
         };
+
+        // Register so global cancelSpeech() can abort this instance, and so
+        // the caller can hold the same handle for a toggle button.
+        audio._currentStop = stopFn;
         speakNext();
+        return stopFn;
       }
     };
   })();
+  // Test hook — exposes the audio module so unit tests can drive it directly.
+  // No production code path reads this; it's a no-op in normal use.
+  if (typeof window !== 'undefined') { window.__audio = audio; }
 
   /* ------- GAME STATE ------------------------------------------------------ */
   const state = {
@@ -2410,6 +2603,32 @@ const Q = (() => {
       ctx.fillRect(px+2, py+TILE-2, TILE-2, 2);
       return;
     }
+    if(ch === "?"){
+      // GLOWING SECRET PASSAGE — renders as a wall block (so it visually
+      // sits in the perimeter line) but pulses magenta. The kid can walk
+      // straight through; the secret-entrance object handler triggers the
+      // hidden credits room. Reduced-motion users still get a static tint
+      // so the block remains discoverable without animation.
+      const t2 = THEMES[room.theme] || THEMES.overworld;
+      const cycle = state.reduced ? 0.6 : (Math.sin(Date.now()/420) + 1) / 2;
+      // Wall base (so the block reads as part of the perimeter)
+      ctx.fillStyle = t2.wall;
+      ctx.fillRect(px, py, TILE, TILE);
+      ctx.fillStyle = t2.wallL;
+      ctx.fillRect(px, py, TILE, 2);
+      ctx.fillRect(px, py, 2, TILE);
+      ctx.fillStyle = "#0006";
+      ctx.fillRect(px+TILE-2, py+2, 2, TILE-2);
+      ctx.fillRect(px+2, py+TILE-2, TILE-2, 2);
+      // Magenta glow inset — clearly NOT a normal wall up close
+      ctx.fillStyle = `rgba(198,77,198,${0.30 + 0.45*cycle})`;
+      ctx.fillRect(px+3, py+3, TILE-6, TILE-6);
+      // Two tiny stars hint that something is here
+      ctx.fillStyle = `rgba(255,255,255,${0.55 + 0.40*cycle})`;
+      ctx.fillRect(px+5, py+5, 1, 1);
+      ctx.fillRect(px+10, py+10, 1, 1);
+      return;
+    }
     // Floor base
     ctx.fillStyle = t.floor;
     ctx.fillRect(px, py, TILE, TILE);
@@ -2462,24 +2681,9 @@ const Q = (() => {
         break;
       }
       case "secret-entrance": {
-        // Subtle glowing magenta archway -- the hidden credits room entrance.
-        // Less obvious than a regular door but visible if you look closely.
-        const pulse = (Math.sin(Date.now()/350)+1)/2;
-        // Stone arch frame
-        ctx.fillStyle = PAL.stoneD;
-        ctx.fillRect(px+2, py+1, 12, 14);
-        ctx.fillStyle = PAL.stone;
-        ctx.fillRect(px+3, py+2, 10, 12);
-        // Inner doorway -- dark with subtle magenta glow
-        ctx.fillStyle = "#0b1020";
-        ctx.fillRect(px+4, py+3, 8, 11);
-        ctx.fillStyle = `rgba(198,77,198,${0.30+0.45*pulse})`;
-        ctx.fillRect(px+5, py+4, 6, 9);
-        // Tiny stars inside the archway -- "something's hiding here"
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(px+6, py+6, 1, 1);
-        ctx.fillRect(px+9, py+9, 1, 1);
-        ctx.fillRect(px+8, py+5, 1, 1);
+        // The glow is now drawn by drawTile() for the "?" tile char itself
+        // (the secret block sits in the perimeter wall, not on a floor cell).
+        // No object-layer overlay needed — keeps the wall line clean.
         break;
       }
       case "puzzle": {
@@ -2910,9 +3114,13 @@ const Q = (() => {
       // past the three signs before reaching the GO! portal at the bottom.
       state.hero = { x: 32, y: 32, dir: "down", frame: 0, moving: false };
     } else if(roomKey === "credits"){
-      // Spawn at the top of the credits room facing down -- they walk down
-      // past each sign + the monument, then through the exit door.
-      state.hero = { x: 7*TILE, y: 1*TILE, dir: "down", frame: 0, moving: false };
+      // Spawn just left of the top sign on a CLEAR floor tile (tile 3,1).
+      // The earlier (7,1) spawn became unwalkable when we placed the new
+      // credit-built sign on that tile — the hero would render INSIDE the
+      // sign's blocking object and every corner sweep would fail. We now
+      // pick a known-empty cell and the navigability self-test (below)
+      // asserts no spawn ever lands on a blocking object again.
+      state.hero = { x: 3*TILE, y: 1*TILE, dir: "down", frame: 0, moving: false };
     } else {
       // Enter near bottom door
       const exit = room.objects.find(o => o.kind === "exit");
@@ -3239,9 +3447,10 @@ const Q = (() => {
           break;
         }
         // Teach first, then run the puzzle on confirm. Pull the tier-aware brief.
+        // PM tier prefers PM brief, falls back to operative, then cadet.
         const tier = state.tier || "cadet";
         const briefSet = STRINGS.stageIntros[obj.stage - 1];
-        const intro = briefSet[tier] || briefSet.cadet;
+        const intro = briefSet[tier] || briefSet.operative || briefSet.cadet;
         showDialog(intro.title, intro.text, { onClose: () => openPuzzle(obj.stage), narrate: true });
         break;
       }
@@ -3335,14 +3544,42 @@ const Q = (() => {
     mainSpan.textContent = mainText;
     body.appendChild(mainSpan);
 
-    // 🔊 Narrate button
+    // 🔊 Narrate button — TOGGLE (Read it to me ↔ Stop reading)
+    // Clicking while speech is in flight aborts mid-sentence; the audio
+    // module's onDone callback flips us back to the Read label whether the
+    // read finished naturally OR was canceled.
     if(narrate && audio.canSpeak()){
       const sBtn = document.createElement("button");
       sBtn.className = "btn btn--ghost speak-btn";
       sBtn.type = "button";
       sBtn.style.marginTop = "10px";
-      sBtn.textContent = "🔊 Read it to me";
-      sBtn.onclick = () => audio.speakInto(mainSpan, mainText);
+      const READ_LABEL = "🔊 Read it to me";
+      const STOP_LABEL = "⏹ Stop reading";
+      sBtn.textContent = READ_LABEL;
+      sBtn.setAttribute("aria-label", READ_LABEL);
+      let activeStop = null;
+      const resetButton = () => {
+        activeStop = null;
+        sBtn.textContent = READ_LABEL;
+        sBtn.setAttribute("aria-label", READ_LABEL);
+        sBtn.classList.remove("is-speaking");
+      };
+      sBtn.onclick = () => {
+        if(activeStop){
+          // Stop mid-sentence — onDone callback below will reset the button,
+          // but call resetButton() too as a defensive belt-and-suspenders.
+          try { activeStop(); } catch(e) {}
+          resetButton();
+          return;
+        }
+        sBtn.textContent = STOP_LABEL;
+        sBtn.setAttribute("aria-label", STOP_LABEL);
+        sBtn.classList.add("is-speaking");
+        activeStop = audio.speakInto(mainSpan, mainText, /* onDone */ () => {
+          // Fires whether the read completed naturally OR was canceled.
+          resetButton();
+        });
+      };
       body.appendChild(document.createElement("br"));
       body.appendChild(sBtn);
     }
@@ -3530,8 +3767,11 @@ const Q = (() => {
       showDialog("Already cleared", "You already finished this stage. Find another portal!");
       return;
     }
+    // DARPA PM tier shares Operative-grade puzzle mechanics (the educational
+    // delta lives in the stage intro brief, not in the puzzle difficulty).
     const tier = state.tier || "cadet";
-    const def = puzzles[stage][tier]();
+    const puzzleTier = (tier === "pm" ? "operative" : tier);
+    const def = puzzles[stage][puzzleTier]();
     activePuzzle = { stage, def, startTs: Date.now() };
     puzzleHintLevel = state.coop ? 1 : 0;
 
